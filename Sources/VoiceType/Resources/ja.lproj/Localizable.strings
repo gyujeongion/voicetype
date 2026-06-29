@@ -1,0 +1,103 @@
+/* VoiceType — Japanese */
+
+"tab.general" = "一般";
+"tab.prompts" = "プロファイル";
+"tab.vocabulary" = "用語集";
+"tab.history" = "履歴";
+
+"stt.section" = "STTエンジン";
+"stt.engine" = "エンジン";
+"stt.apikey" = "APIキー";
+"stt.getkey" = "APIキーを取得 ↗";
+"stt.testkey" = "キーをテスト";
+"stt.testing" = "テスト中…";
+"stt.keychain.note" = "Keychainに安全に保存されます。エンジンごとに個別のキーが保存されます。";
+"stt.language.hints" = "言語ヒント（カンマ区切り）";
+"stt.custom.endpoint" = "カスタムエンドポイント (wss://…)";
+
+"mic.section" = "マイク優先順位";
+"mic.empty" = "優先順位未設定 — システムのデフォルトマイクを使用";
+"mic.add" = "デバイスを追加";
+"mic.refresh" = "更新";
+"mic.note" = "上から順に試みます。保存後はこの順序が常に使用されます。";
+
+"output.section" = "出力";
+"output.autopaste" = "自動ペースト (Cmd+V)";
+"output.autopaste.note" = "結果は常にクリップボードにコピーされます — 自動ペーストが失敗しても Cmd+V で貼り付けできます。";
+"output.accessibility" = "アクセシビリティ権限（自動ペーストに必要）";
+"output.accessibility.open" = "アクセシビリティ設定を開く";
+"output.accessibility.note" = "権限を付与した後、VoiceTypeを再起動すると自動ペーストが有効になります。";
+
+"language.section" = "言語";
+"language.picker" = "アプリの言語";
+"language.system" = "システム言語";
+
+"diag.section" = "トラブルシューティング";
+"diag.copy" = "診断情報をコピー";
+"diag.copied" = "コピー済み ✓";
+"diag.note" = "問題が発生した場合は診断情報をコピーしてバグレポートに添付してください。";
+
+"prompts.title" = "プロンプトプロファイル";
+"prompts.note" = "各プロファイルは独自のホットキーで録音を開始します。LLMを有効にすると、カスタム指示で文字起こしを後処理します。";
+"prompts.add" = "新しいプロファイル";
+"prompts.llm.section" = "LLMプロバイダー（翻訳・要約・クリーンアップ用）";
+"prompts.llm.provider" = "プロバイダー";
+"prompts.llm.endpoint" = "エンドポイント";
+"prompts.llm.model" = "モデル";
+"prompts.llm.apikey" = "APIキー";
+"prompts.llm.preset.note" = "プリセットを選択するとエンドポイントとモデルが自動入力されます。直接編集も可能です。";
+"prompts.profile.name" = "名前";
+"prompts.profile.hotkey.press" = "キーを押してください…";
+"prompts.llm.toggle" = "LLM";
+"prompts.llm.off.note" = "LLMオフ — STT + 用語修正のみ（最速）";
+"prompts.llm.example" = "例：「韓国語を自然な英語に翻訳」「3箇条で要約」「フォーマルなメールのトーンで書き直す」";
+"prompts.getkey" = "APIキーを取得 ↗";
+"prompts.testkey" = "キーをテスト";
+"prompts.testing" = "テスト中…";
+
+"vocab.title" = "カスタム用語集";
+"vocab.note" = "カンマまたは改行で区切って用語を入力してください。STTのコンテキストヒントとして注入され、音声認識精度が向上します。";
+"vocab.count" = "%d個の用語が有効";
+
+"history.title" = "文字起こし履歴";
+"history.note" = "生の文字起こしとLLM処理結果を並べて保存します。";
+"history.empty" = "履歴がありません。";
+"history.delete.all" = "すべて削除";
+"history.raw.show" = "生データを表示 (STT)";
+"history.raw.hide" = "生データを非表示";
+"history.empty.result" = "（空の結果）";
+"history.copy" = "コピー";
+"history.copied" = "コピー済み";
+"history.unpasted" = "未ペースト";
+
+"onboarding.welcome.title" = "VoiceTypeへようこそ";
+"onboarding.welcome.subtitle" = "ショートカットを押して話すと、離した瞬間にテキストがカーソル位置に入力されます。";
+"onboarding.welcome.free" = "VoiceTypeは無料でサーバー不要です。";
+"onboarding.welcome.key" = "音声認識とAIはお客様のAPIキーで直接処理されます。";
+"onboarding.welcome.cost" = "API使用料は各サービスに直接お支払いください。";
+"onboarding.mic.title" = "マイクへのアクセス";
+"onboarding.mic.subtitle" = "音声をキャプチャするために必要です。";
+"onboarding.mic.granted" = "許可済み";
+"onboarding.mic.denied" = "拒否済み";
+"onboarding.mic.open" = "システム設定で許可";
+"onboarding.mic.request" = "マイクアクセスをリクエスト";
+"onboarding.ax.title" = "アクセシビリティ権限";
+"onboarding.ax.subtitle" = "カーソル位置への自動ペースト（Cmd+V合成）に必要です。\n（なくても結果は常にクリップボードにコピーされます）";
+"onboarding.ax.open" = "アクセシビリティ設定を開く";
+"onboarding.ax.note" = "リストでVoiceTypeを有効にしてから次に進んでください。（後で設定からも変更可能）";
+"onboarding.key.title" = "STT APIキー";
+"onboarding.key.subtitle" = "Deepgramは最速で$200の無料クレジットがあります。Sonioxは日韓混在に最適です。";
+"onboarding.key.engine" = "エンジン";
+"onboarding.key.getkey" = "APIキーを取得 ↗";
+"onboarding.key.paste" = "APIキーを貼り付け";
+"onboarding.key.test" = "キーをテスト";
+"onboarding.key.testing" = "テスト中…";
+"onboarding.done.title" = "準備完了！";
+"onboarding.done.hint1" = "Option+Space — 文字起こし（もう一度押すと停止）";
+"onboarding.done.hint2" = "Option+Shift+Space — 英語に翻訳";
+"onboarding.done.hint3" = "🎙 メニューバーアイコンから設定と履歴にアクセス";
+"onboarding.done.note" = "プロンプト、用語集、ホットキーは設定からいつでも変更できます。";
+"onboarding.btn.next" = "次へ";
+"onboarding.btn.prev" = "戻る";
+"onboarding.btn.save" = "保存して続ける";
+"onboarding.btn.start" = "始める";

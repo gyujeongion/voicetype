@@ -1,0 +1,103 @@
+/* VoiceType — French */
+
+"tab.general" = "Général";
+"tab.prompts" = "Profils";
+"tab.vocabulary" = "Vocabulaire";
+"tab.history" = "Historique";
+
+"stt.section" = "Moteur STT";
+"stt.engine" = "Moteur";
+"stt.apikey" = "Clé API";
+"stt.getkey" = "Obtenir une clé API ↗";
+"stt.testkey" = "Tester la clé";
+"stt.testing" = "Test en cours…";
+"stt.keychain.note" = "Stocké de manière sécurisée dans le Trousseau. Chaque moteur a sa propre clé.";
+"stt.language.hints" = "Suggestions de langue (séparées par des virgules)";
+"stt.custom.endpoint" = "Point de terminaison personnalisé (wss://…)";
+
+"mic.section" = "Priorité du microphone";
+"mic.empty" = "Aucune priorité définie — utilisation du microphone par défaut du système";
+"mic.add" = "Ajouter un appareil";
+"mic.refresh" = "Actualiser";
+"mic.note" = "Les appareils sont essayés de haut en bas. Cet ordre est conservé après sauvegarde.";
+
+"output.section" = "Sortie";
+"output.autopaste" = "Coller automatiquement (Cmd+V)";
+"output.autopaste.note" = "Le résultat est toujours copié dans le presse-papiers — Cmd+V fonctionne même si le collage automatique échoue.";
+"output.accessibility" = "Permission d'accessibilité (requise pour le collage automatique)";
+"output.accessibility.open" = "Ouvrir les réglages d'accessibilité";
+"output.accessibility.note" = "Relancez VoiceType après avoir accordé la permission pour activer le collage automatique.";
+
+"language.section" = "Langue";
+"language.picker" = "Langue de l'app";
+"language.system" = "Langue du système";
+
+"diag.section" = "Dépannage";
+"diag.copy" = "Copier les diagnostics";
+"diag.copied" = "Copié ✓";
+"diag.note" = "Copiez les diagnostics et joignez-les à un rapport de bogue si quelque chose ne va pas.";
+
+"prompts.title" = "Profils de prompt";
+"prompts.note" = "Chaque profil a son propre raccourci clavier. Activez LLM pour post-traiter la transcription avec une instruction personnalisée.";
+"prompts.add" = "Nouveau profil";
+"prompts.llm.section" = "Fournisseur LLM (pour traduction · résumé · nettoyage)";
+"prompts.llm.provider" = "Fournisseur";
+"prompts.llm.endpoint" = "Point de terminaison";
+"prompts.llm.model" = "Modèle";
+"prompts.llm.apikey" = "Clé API";
+"prompts.llm.preset.note" = "Sélectionner un préréglage remplit automatiquement le point de terminaison et le modèle. Modification directe possible.";
+"prompts.profile.name" = "Nom";
+"prompts.profile.hotkey.press" = "Appuyez sur une touche…";
+"prompts.llm.toggle" = "LLM";
+"prompts.llm.off.note" = "LLM désactivé — STT + correction du vocabulaire uniquement (le plus rapide)";
+"prompts.llm.example" = "ex. \"Traduire le coréen en anglais naturel\", \"Résumer en 3 points\", \"Réécrire comme un e-mail formel\"";
+"prompts.getkey" = "Obtenir une clé API ↗";
+"prompts.testkey" = "Tester la clé";
+"prompts.testing" = "Test en cours…";
+
+"vocab.title" = "Vocabulaire personnalisé";
+"vocab.note" = "Entrez des termes séparés par des virgules ou des sauts de ligne. Ils sont injectés comme indices de contexte STT pour améliorer la reconnaissance des mots spécifiques.";
+"vocab.count" = "%d termes actifs";
+
+"history.title" = "Historique de dictée";
+"history.note" = "Conserve la transcription brute et le résultat traité par LLM côte à côte.";
+"history.empty" = "Aucun historique pour l'instant.";
+"history.delete.all" = "Tout supprimer";
+"history.raw.show" = "Afficher le texte brut (STT)";
+"history.raw.hide" = "Masquer le texte brut";
+"history.empty.result" = "(résultat vide)";
+"history.copy" = "Copier";
+"history.copied" = "Copié";
+"history.unpasted" = "non collé";
+
+"onboarding.welcome.title" = "Bienvenue dans VoiceType";
+"onboarding.welcome.subtitle" = "Appuyez sur le raccourci, parlez, relâchez — le texte apparaît instantanément au curseur.";
+"onboarding.welcome.free" = "VoiceType est gratuit et ne nécessite pas de serveur.";
+"onboarding.welcome.key" = "La reconnaissance vocale et l'IA fonctionnent directement avec vos clés API — VoiceType ne facture rien.";
+"onboarding.welcome.cost" = "Les frais d'utilisation de l'API sont payés directement au fournisseur.";
+"onboarding.mic.title" = "Accès au microphone";
+"onboarding.mic.subtitle" = "Nécessaire pour capturer l'audio.";
+"onboarding.mic.granted" = "Accordé";
+"onboarding.mic.denied" = "Refusé";
+"onboarding.mic.open" = "Ouvrir dans les Préférences Système";
+"onboarding.mic.request" = "Demander l'accès au microphone";
+"onboarding.ax.title" = "Permission d'accessibilité";
+"onboarding.ax.subtitle" = "Nécessaire pour coller automatiquement au curseur (synthèse Cmd+V).\n(Sans permission, le résultat est toujours copié dans le presse-papiers.)";
+"onboarding.ax.open" = "Ouvrir les réglages d'accessibilité";
+"onboarding.ax.note" = "Activez VoiceType dans la liste puis cliquez sur Suivant. (Peut aussi être fait plus tard dans les Réglages.)";
+"onboarding.key.title" = "Clé API STT";
+"onboarding.key.subtitle" = "Deepgram est le plus rapide avec 200 $ de crédit gratuit. Soniox est meilleur pour le coréen.";
+"onboarding.key.engine" = "Moteur";
+"onboarding.key.getkey" = "Obtenir une clé API ↗";
+"onboarding.key.paste" = "Coller la clé API";
+"onboarding.key.test" = "Tester la clé";
+"onboarding.key.testing" = "Test en cours…";
+"onboarding.done.title" = "Prêt !";
+"onboarding.done.hint1" = "Option+Espace — dictée (appuyer à nouveau pour arrêter)";
+"onboarding.done.hint2" = "Option+Maj+Espace — traduire en anglais";
+"onboarding.done.hint3" = "Accédez à l'historique et aux réglages via l'icône 🎙 dans la barre des menus";
+"onboarding.done.note" = "Les prompts, le vocabulaire et les raccourcis peuvent être modifiés à tout moment dans les Réglages.";
+"onboarding.btn.next" = "Suivant";
+"onboarding.btn.prev" = "Retour";
+"onboarding.btn.save" = "Enregistrer et continuer";
+"onboarding.btn.start" = "Commencer";

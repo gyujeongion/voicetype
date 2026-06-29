@@ -1,0 +1,187 @@
+/* VoiceType — Korean (base) */
+
+/* Tabs */
+"tab.general" = "일반";
+"tab.prompts" = "프롬프트";
+"tab.vocabulary" = "단어사전";
+"tab.history" = "히스토리";
+
+/* App shell */
+"window.settings" = "VoiceType 설정";
+"menu.edit" = "편집";
+"menu.undo" = "실행 취소";
+"menu.redo" = "다시 실행";
+"menu.cut" = "오려두기";
+"menu.copy" = "복사하기";
+"menu.paste" = "붙여넣기";
+"menu.select_all" = "전체 선택";
+"menu.toggle_recording" = "녹음 시작 / 종료";
+"menu.settings" = "설정…";
+"menu.check_updates" = "업데이트 확인…";
+"menu.quit" = "VoiceType 종료";
+"alert.ok" = "확인";
+"alert.copy_diagnostics" = "진단 정보 복사";
+"indicator.recording" = "녹음 중";
+"indicator.processing" = "받아쓰는 중…";
+"mic.level.running" = "입력 감지 중";
+"mic.level.stopped" = "입력 확인 꺼짐";
+
+/* General — STT section */
+"stt.section" = "STT 엔진";
+"stt.engine" = "엔진";
+"stt.apikey" = "API 키";
+"stt.getkey" = "키 발급받기 ↗";
+"stt.testkey" = "키 테스트";
+"stt.testing" = "테스트 중…";
+"stt.keychain.note" = "Keychain에 안전하게 저장됩니다. 엔진마다 키가 따로 저장됩니다.";
+"stt.language.hints" = "언어 힌트 (쉼표 구분)";
+"stt.custom.endpoint" = "커스텀 엔드포인트 (wss://…)";
+
+/* General — STT info popover */
+"stt.info.title" = "실시간 STT";
+"stt.info.body" = "VoiceType은 WebSocket 실시간 스트리밍을 사용합니다.\n\n⭐ 추천: Deepgram Nova-3, Soniox\n— 네이티브 지원, 가장 낮은 지연.\n\n그 외 목록의 서비스는 커스텀 엔드포인트를 사용합니다. 해당 서비스가 WebSocket 스트리밍 API를 지원하는지 확인 후 URL을 직접 입력하세요.";
+"stt.recommended" = "추천";
+"stt.preset.deepgram.note" = "지연이 낮고 시작 크레딧이 있어 빠르게 테스트하기 좋습니다. 실시간 다국어 받아쓰기에 무난합니다.";
+"stt.preset.soniox.note" = "빠르고 정확한 실시간 다국어 전사 엔진입니다. 언어가 섞인 발화에 특히 강합니다.";
+"stt.preset.gladia.note" = "실시간 스트리밍 제공자입니다. 엔드포인트 프로토콜이 맞을 때만 설정하세요.";
+"stt.preset.assemblyai.note" = "실시간 스트리밍 제공자입니다. 엔드포인트 프로토콜이 맞을 때만 설정하세요.";
+"stt.preset.speechmatics.note" = "리전별 엔드포인트를 제공하는 실시간 스트리밍 제공자입니다.";
+"stt.preset.revai.note" = "실시간 스트리밍 제공자입니다.";
+"stt.preset.symbl.note" = "실시간 스트리밍 제공자입니다.";
+"stt.preset.custom.note" = "스트리밍 WebSocket STT 엔드포인트라면 직접 URL을 입력해 사용할 수 있습니다.";
+
+/* General — Microphone section */
+"mic.section" = "마이크";
+"mic.source" = "사용할 마이크";
+"mic.auto.option" = "자동 선택 (우선순위 사용)";
+"mic.active" = "현재 입력";
+"mic.active.selected" = "지금은 사용자가 직접 고른 마이크를 사용 중입니다.";
+"mic.active.auto" = "지금은 아래 우선순위 또는 macOS 기본 입력으로 자동 선택 중입니다.";
+"mic.monitor.start" = "입력 확인";
+"mic.monitor.stop" = "입력 확인 중지";
+"mic.monitor.note" = "실제 받아쓰기와 같은 입력 레벨을 바로 보여줍니다.";
+"mic.priority.title" = "자동 선택 우선순위";
+"mic.priority.empty" = "우선순위를 지정하지 않으면 macOS 기본 마이크를 사용합니다.";
+"mic.unavailable.short" = "연결 안 됨";
+"mic.fallback.note" = "선택한 마이크가 지금 연결되어 있지 않아, 아래 우선순위로 자동 전환합니다.";
+"mic.empty" = "우선순위 미설정 — 시스템 기본 마이크 사용";
+"mic.add" = "장치 추가";
+"mic.refresh" = "새로고침";
+"mic.test" = "마이크 테스트";
+"mic.note" = "위에서부터 우선 연결. 한 번 저장하면 계속 이 우선순위로 연결됩니다.";
+
+/* General — Output section */
+"output.section" = "출력";
+"output.autopaste" = "자동 붙여넣기 (Cmd+V)";
+"output.autopaste.note" = "결과는 항상 클립보드에 복사됩니다 — 자동 붙여넣기를 놓쳐도 Cmd+V로 붙일 수 있습니다.";
+"output.accessibility" = "손쉬운 사용 권한 (자동 붙여넣기에 필수)";
+"output.accessibility.open" = "권한 설정 열기";
+"output.accessibility.note" = "권한 부여 후 VoiceType을 한 번 재실행하면 자동 붙여넣기가 동작합니다.";
+
+/* General — Space bar trigger section */
+"output.space.section" = "Space 꾹누르기 음성 입력";
+"output.space.toggle" = "Space 꾹누르기 → 음성 입력";
+"output.space.profile" = "적용할 프로파일";
+"output.space.excluded" = "사용 제외 앱";
+"output.space.add_running" = "실행 중인 앱";
+"output.space.no_running" = "다른 실행 중인 앱 없음";
+"output.space.browse" = "응용 프로그램에서 선택…";
+"output.space.excluded.empty" = "아직 제외된 앱이 없습니다.";
+"output.space.note" = "Space를 일정 횟수 이상 누르면 녹음 시작, 손을 떼면 종료합니다. 여기서 고른 프로파일로 처리되며 손쉬운 사용 권한이 필요합니다.";
+"output.space.sensitivity" = "감도";
+
+/* General — Language section */
+"language.section" = "언어";
+"language.picker" = "앱 언어";
+"language.system" = "시스템 언어";
+
+/* General — LLM section */
+"llm.section" = "LLM";
+"llm.required.note" = "번역, 정리, 요약 같은 LLM 기반 프로파일은 모두 여기의 공통 LLM 설정을 사용합니다.";
+"llm.local.models" = "추천 로컬 모델";
+"llm.local.note" = "Ollama를 쓸 때는 로컬 엔드포인트를 유지하고, 이 Mac에 실제로 설치된 모델명을 쓰면 됩니다. 직접 다른 태그를 입력해도 됩니다.";
+"llm.apikey.optional" = "API 키 (선택)";
+"llm.apikey.placeholder.optional" = "선택 입력";
+
+/* General — Troubleshooting section */
+"diag.section" = "문제 해결";
+"diag.copy" = "진단 정보 복사";
+"diag.copied" = "복사됨 ✓";
+"diag.note" = "문제가 있으면 진단 정보를 복사해 문의에 첨부하세요.";
+
+/* Prompts tab */
+"prompts.title" = "프롬프트 프로파일";
+"prompts.note" = "각 프로파일은 자체 단축키로 녹음을 시작합니다. LLM을 켜면 전사문을 지시대로 가공(번역·요약·정리)합니다.";
+"prompts.add" = "새 프롬프트";
+"prompts.llm.section" = "LLM 제공자 (번역·요약·정리용)";
+"prompts.llm.provider" = "제공자";
+"prompts.llm.endpoint" = "엔드포인트";
+"prompts.llm.model" = "모델";
+"prompts.llm.apikey" = "API 키";
+"prompts.llm.preset.note" = "프리셋을 고르면 엔드포인트·모델이 자동 입력됩니다. 직접 수정도 가능 (커스텀).";
+"prompts.profile.name" = "이름";
+"prompts.profile.unassigned" = "미지정";
+"prompts.profile.hotkey.press" = "키 누르세요…";
+"prompts.profile.hotkey.cancel" = "키 누르세요… (ESC=취소)";
+"prompts.trigger.toggle" = "토글";
+"prompts.trigger.hold" = "홀드";
+"prompts.llm.toggle" = "LLM";
+"prompts.llm.off.note" = "LLM 꺼짐 — 전사 + 단어사전 보정만 (가장 빠름)";
+"prompts.llm.example" = "예: \"한국어를 자연스러운 영어로 번역\", \"핵심만 3줄 요약\", \"격식 있는 이메일 톤으로\"";
+"prompts.trigger.help" = "Toggle: 한 번 눌러 시작/종료 | Hold: 누르는 동안 녹음";
+"prompts.getkey" = "키 발급받기 ↗";
+"prompts.testkey" = "키 테스트";
+"prompts.testing" = "테스트 중…";
+"prompts.llm.moved.note" = "공통 LLM 엔진은 일반 탭에서 설정합니다. 모든 프로파일이 같은 제공자와 모델을 공유합니다.";
+
+/* Vocabulary tab */
+"vocab.title" = "자주 쓰는 용어·인물 사전";
+"vocab.note" = "아래에 용어를 쭉 적으세요 (쉼표 또는 줄바꿈으로 구분). 적은 용어는 STT에 힌트로 주입되어, 비슷하게 들리는 발화를 모델이 알아서 그 표기로 교정합니다.";
+"vocab.count" = "%d개 용어 인식 중";
+"vocab.example" = "Aphex Twin, Four Tet\nFloating Points\nRoland TR-808";
+
+/* History tab */
+"history.title" = "받아쓰기 히스토리";
+"history.note" = "원문(STT)과 LLM으로 다듬은 최종본을 함께 보관합니다. 항목을 복사해 다시 붙여넣을 수 있습니다.";
+"history.empty" = "아직 기록이 없습니다.";
+"history.delete.all" = "전체 삭제";
+"history.raw.show" = "원문 보기 (STT)";
+"history.raw.hide" = "원문 숨기기";
+"history.empty.result" = "(빈 결과)";
+"history.copy" = "복사";
+"history.copied" = "복사됨";
+"history.unpasted" = "미붙여넣기";
+
+/* Onboarding */
+"onboarding.welcome.title" = "VoiceType 에 오신 걸 환영합니다";
+"onboarding.window.title" = "VoiceType 시작하기";
+"onboarding.welcome.subtitle" = "받아쓰기 단축키를 누르고 말한 뒤 멈추면, 텍스트가 바로 커서 위치에 들어갑니다. 빠른 실시간 다국어 받아쓰기에 맞춰 설계했습니다.";
+"onboarding.welcome.free" = "VoiceType은 무료이며, 별도 서버를 운영하지 않습니다.";
+"onboarding.welcome.key" = "음성 인식·AI는 본인의 API 키로 직접 처리됩니다. (앱이 비용을 청구하지 않음)";
+"onboarding.welcome.cost" = "API 사용료는 각 서비스(Soniox 등)에 본인이 직접 지불합니다.";
+"onboarding.mic.title" = "마이크 권한";
+"onboarding.mic.subtitle" = "음성을 녹음하려면 마이크 접근 권한이 필요합니다.";
+"onboarding.mic.granted" = "허용됨";
+"onboarding.mic.denied" = "거부됨";
+"onboarding.mic.open" = "시스템 설정에서 허용";
+"onboarding.mic.request" = "마이크 권한 요청";
+"onboarding.ax.title" = "손쉬운 사용 권한";
+"onboarding.ax.subtitle" = "받아쓴 텍스트를 커서 자리에 자동으로 붙여넣기(Cmd+V) 하려면 손쉬운 사용 권한이 필요합니다.\n(권한이 없어도 결과는 항상 클립보드에 복사됩니다)";
+"onboarding.ax.open" = "손쉬운 사용 설정 열기";
+"onboarding.ax.note" = "목록에서 VoiceType을 켠 뒤 다음으로 진행하세요. (나중에 설정에서도 가능)";
+"onboarding.key.title" = "STT(음성 인식) API 키";
+"onboarding.key.subtitle" = "작업 방식에 맞는 STT 엔진을 고르세요. Deepgram은 시작이 빠르고, Soniox는 언어가 섞인 발화에 강합니다.";
+"onboarding.key.engine" = "엔진";
+"onboarding.key.getkey" = "키 발급받기 ↗";
+"onboarding.key.paste" = "API 키 붙여넣기";
+"onboarding.key.test" = "키 테스트";
+"onboarding.key.testing" = "테스트 중…";
+"onboarding.done.title" = "준비 완료!";
+"onboarding.done.hint1" = "Option+Space — dictation (press again to stop)";
+"onboarding.done.hint2" = "Option+Shift+Space — translate to English";
+"onboarding.done.hint3" = "메뉴바 🎙 아이콘에서 설정·히스토리 확인";
+"onboarding.done.note" = "프롬프트·단어사전·단축키는 메뉴바 → 설정에서 자유롭게 바꿀 수 있습니다.";
+"onboarding.btn.next" = "다음";
+"onboarding.btn.prev" = "이전";
+"onboarding.btn.save" = "저장하고 계속";
+"onboarding.btn.start" = "시작하기";

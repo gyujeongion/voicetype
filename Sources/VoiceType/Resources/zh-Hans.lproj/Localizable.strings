@@ -1,0 +1,103 @@
+/* VoiceType — Simplified Chinese */
+
+"tab.general" = "通用";
+"tab.prompts" = "配置文件";
+"tab.vocabulary" = "词汇表";
+"tab.history" = "历史记录";
+
+"stt.section" = "语音识别引擎";
+"stt.engine" = "引擎";
+"stt.apikey" = "API密钥";
+"stt.getkey" = "获取API密钥 ↗";
+"stt.testkey" = "测试密钥";
+"stt.testing" = "测试中…";
+"stt.keychain.note" = "安全存储在钥匙串中。每个引擎分别存储密钥。";
+"stt.language.hints" = "语言提示（逗号分隔）";
+"stt.custom.endpoint" = "自定义端点 (wss://…)";
+
+"mic.section" = "麦克风优先级";
+"mic.empty" = "未设置优先级 — 使用系统默认麦克风";
+"mic.add" = "添加设备";
+"mic.refresh" = "刷新";
+"mic.note" = "从上到下依次尝试。保存后始终按此顺序连接。";
+
+"output.section" = "输出";
+"output.autopaste" = "自动粘贴 (Cmd+V)";
+"output.autopaste.note" = "结果始终复制到剪贴板 — 即使自动粘贴失败，也可用 Cmd+V 粘贴。";
+"output.accessibility" = "辅助功能权限（自动粘贴所需）";
+"output.accessibility.open" = "打开辅助功能设置";
+"output.accessibility.note" = "授权后重启VoiceType即可激活自动粘贴。";
+
+"language.section" = "语言";
+"language.picker" = "应用语言";
+"language.system" = "系统语言";
+
+"diag.section" = "问题排查";
+"diag.copy" = "复制诊断信息";
+"diag.copied" = "已复制 ✓";
+"diag.note" = "遇到问题时复制诊断信息并附在错误报告中。";
+
+"prompts.title" = "提示配置文件";
+"prompts.note" = "每个配置文件有独立的快捷键。启用LLM可按自定义指令后处理转录文本。";
+"prompts.add" = "新建配置文件";
+"prompts.llm.section" = "LLM提供商（用于翻译·摘要·整理）";
+"prompts.llm.provider" = "提供商";
+"prompts.llm.endpoint" = "端点";
+"prompts.llm.model" = "模型";
+"prompts.llm.apikey" = "API密钥";
+"prompts.llm.preset.note" = "选择预设会自动填入端点和模型。也可直接编辑（自定义）。";
+"prompts.profile.name" = "名称";
+"prompts.profile.hotkey.press" = "请按键…";
+"prompts.llm.toggle" = "LLM";
+"prompts.llm.off.note" = "LLM关闭 — 仅STT + 词汇校正（最快）";
+"prompts.llm.example" = "例如：\"将韩语翻译为自然英语\"、\"用3条要点总结\"、\"改写为正式邮件风格\"";
+"prompts.getkey" = "获取API密钥 ↗";
+"prompts.testkey" = "测试密钥";
+"prompts.testing" = "测试中…";
+
+"vocab.title" = "自定义词汇表";
+"vocab.note" = "输入用逗号或换行符分隔的术语。这些术语作为STT上下文提示注入，提高特定词汇的识别准确性。";
+"vocab.count" = "%d个术语已激活";
+
+"history.title" = "听写历史";
+"history.note" = "并排保存原始转录和LLM处理结果。";
+"history.empty" = "暂无历史记录。";
+"history.delete.all" = "全部删除";
+"history.raw.show" = "显示原始内容 (STT)";
+"history.raw.hide" = "隐藏原始内容";
+"history.empty.result" = "（空结果）";
+"history.copy" = "复制";
+"history.copied" = "已复制";
+"history.unpasted" = "未粘贴";
+
+"onboarding.welcome.title" = "欢迎使用VoiceType";
+"onboarding.welcome.subtitle" = "按下听写快捷键，说话，松开时文字立即出现在光标处。";
+"onboarding.welcome.free" = "VoiceType免费使用，无需服务器。";
+"onboarding.welcome.key" = "语音识别和AI直接使用您的API密钥处理，应用本身不收取任何费用。";
+"onboarding.welcome.cost" = "API使用费直接支付给各服务提供商。";
+"onboarding.mic.title" = "麦克风权限";
+"onboarding.mic.subtitle" = "录制音频需要麦克风访问权限。";
+"onboarding.mic.granted" = "已授权";
+"onboarding.mic.denied" = "已拒绝";
+"onboarding.mic.open" = "在系统设置中允许";
+"onboarding.mic.request" = "请求麦克风权限";
+"onboarding.ax.title" = "辅助功能权限";
+"onboarding.ax.subtitle" = "在光标处自动粘贴（Cmd+V合成）需要辅助功能权限。\n（无权限时，结果始终复制到剪贴板，可手动粘贴）";
+"onboarding.ax.open" = "打开辅助功能设置";
+"onboarding.ax.note" = "在列表中启用VoiceType后点击下一步。（也可以稍后在设置中完成）";
+"onboarding.key.title" = "语音识别API密钥";
+"onboarding.key.subtitle" = "Deepgram速度最快，提供$200免费额度。Soniox最适合韩英混合识别。";
+"onboarding.key.engine" = "引擎";
+"onboarding.key.getkey" = "获取API密钥 ↗";
+"onboarding.key.paste" = "粘贴API密钥";
+"onboarding.key.test" = "测试密钥";
+"onboarding.key.testing" = "测试中…";
+"onboarding.done.title" = "准备就绪！";
+"onboarding.done.hint1" = "Option+Space — 听写（再次按下停止）";
+"onboarding.done.hint2" = "Option+Shift+Space — 翻译为英文";
+"onboarding.done.hint3" = "通过 🎙 菜单栏图标访问设置和历史";
+"onboarding.done.note" = "提示词、词汇表和快捷键可在设置中随时更改。";
+"onboarding.btn.next" = "下一步";
+"onboarding.btn.prev" = "返回";
+"onboarding.btn.save" = "保存并继续";
+"onboarding.btn.start" = "开始使用";

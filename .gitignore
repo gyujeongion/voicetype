@@ -1,0 +1,7 @@
+.build/
+VoiceType.app/
+dist/
+*.zip
+*.s16le
+*.aiff
+.DS_Store

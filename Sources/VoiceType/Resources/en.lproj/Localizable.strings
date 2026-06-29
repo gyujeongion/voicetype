@@ -1,0 +1,187 @@
+/* VoiceType — English */
+
+/* Tabs */
+"tab.general" = "General";
+"tab.prompts" = "Profiles";
+"tab.vocabulary" = "Vocabulary";
+"tab.history" = "History";
+
+/* App shell */
+"window.settings" = "VoiceType Settings";
+"menu.edit" = "Edit";
+"menu.undo" = "Undo";
+"menu.redo" = "Redo";
+"menu.cut" = "Cut";
+"menu.copy" = "Copy";
+"menu.paste" = "Paste";
+"menu.select_all" = "Select All";
+"menu.toggle_recording" = "Start / Stop Recording";
+"menu.settings" = "Settings…";
+"menu.check_updates" = "Check for Updates…";
+"menu.quit" = "Quit VoiceType";
+"alert.ok" = "OK";
+"alert.copy_diagnostics" = "Copy Diagnostics";
+"indicator.recording" = "Recording";
+"indicator.processing" = "Transcribing…";
+"mic.level.running" = "Input detected";
+"mic.level.stopped" = "Input check off";
+
+/* General — STT section */
+"stt.section" = "STT Engine";
+"stt.engine" = "Engine";
+"stt.apikey" = "API Key";
+"stt.getkey" = "Get API key ↗";
+"stt.testkey" = "Test key";
+"stt.testing" = "Testing…";
+"stt.keychain.note" = "Stored securely in Keychain. Each engine has its own key slot.";
+"stt.language.hints" = "Language hints (comma-separated)";
+"stt.custom.endpoint" = "Custom endpoint (wss://…)";
+
+/* General — STT info popover */
+"stt.info.title" = "Real-time STT";
+"stt.info.body" = "VoiceType streams audio via WebSocket in real time.\n\n⭐ Recommended: Deepgram Nova-3, Soniox\n— Natively supported, lowest latency.\n\nOther services listed use the Custom endpoint slot. Check that the service supports a streaming WebSocket API and configure the URL manually.";
+"stt.recommended" = "Recommended";
+"stt.preset.deepgram.note" = "Lowest latency with free starter credit. Strong for fast multilingual dictation.";
+"stt.preset.soniox.note" = "Fast, accurate real-time multilingual transcription. Especially strong with mixed-language speech.";
+"stt.preset.gladia.note" = "Real-time streaming provider. Configure only if your endpoint matches their protocol.";
+"stt.preset.assemblyai.note" = "Real-time streaming provider. Configure only if your endpoint matches their protocol.";
+"stt.preset.speechmatics.note" = "Real-time streaming provider with regional endpoints.";
+"stt.preset.revai.note" = "Real-time streaming provider.";
+"stt.preset.symbl.note" = "Real-time streaming provider.";
+"stt.preset.custom.note" = "Any streaming WebSocket STT endpoint. Enter the URL manually.";
+
+/* General — Microphone section */
+"mic.section" = "Microphone";
+"mic.source" = "Use this microphone";
+"mic.auto.option" = "Automatic (priority list)";
+"mic.active" = "Current input";
+"mic.active.selected" = "Using your explicit microphone selection.";
+"mic.active.auto" = "Using automatic selection from the list below or the macOS default input.";
+"mic.monitor.start" = "Start input check";
+"mic.monitor.stop" = "Stop input check";
+"mic.monitor.note" = "Shows the same live input level used for dictation.";
+"mic.priority.title" = "Automatic fallback order";
+"mic.priority.empty" = "If no fallback order is set, VoiceType uses the macOS default microphone.";
+"mic.unavailable.short" = "Unavailable";
+"mic.fallback.note" = "The selected microphone is not available right now, so VoiceType will fall back to the list below.";
+"mic.empty" = "No priority set — using system default microphone";
+"mic.add" = "Add device";
+"mic.refresh" = "Refresh";
+"mic.test" = "Test mic";
+"mic.note" = "Devices tried top-to-bottom. Once saved, VoiceType always prefers this order.";
+
+/* General — Output section */
+"output.section" = "Output";
+"output.autopaste" = "Auto-paste (Cmd+V)";
+"output.autopaste.note" = "Result is always copied to clipboard — if auto-paste misses, Cmd+V still works.";
+"output.accessibility" = "Accessibility permission (required for auto-paste)";
+"output.accessibility.open" = "Open accessibility settings";
+"output.accessibility.note" = "Relaunch VoiceType once after granting permission for auto-paste to activate.";
+
+/* General — Space bar trigger section */
+"output.space.section" = "Space Bar Voice Trigger";
+"output.space.toggle" = "Hold Space → voice input";
+"output.space.profile" = "Profile";
+"output.space.excluded" = "Excluded apps";
+"output.space.add_running" = "Running apps";
+"output.space.no_running" = "No other apps running";
+"output.space.browse" = "Browse Applications…";
+"output.space.excluded.empty" = "No excluded apps yet.";
+"output.space.note" = "Hold Space until recording starts, release to stop. Uses the selected profile. Requires Accessibility permission.";
+"output.space.sensitivity" = "Sensitivity";
+
+/* General — Language section */
+"language.section" = "Language";
+"language.picker" = "App language";
+"language.system" = "System language";
+
+/* General — LLM section */
+"llm.section" = "LLM";
+"llm.required.note" = "VoiceType needs one shared LLM for translation, cleanup, and summary profiles.";
+"llm.local.models" = "Suggested local models";
+"llm.local.note" = "For Ollama, keep the local endpoint and choose a model name that exists on this Mac. You can also type any custom model tag.";
+"llm.apikey.optional" = "API Key (optional)";
+"llm.apikey.placeholder.optional" = "optional";
+
+/* General — Troubleshooting section */
+"diag.section" = "Troubleshooting";
+"diag.copy" = "Copy diagnostics";
+"diag.copied" = "Copied ✓";
+"diag.note" = "Copy diagnostics and attach to a bug report if something goes wrong.";
+
+/* Prompts tab */
+"prompts.title" = "Prompt Profiles";
+"prompts.note" = "Each profile has its own hotkey. Enable LLM to post-process the transcript with a custom instruction.";
+"prompts.add" = "New profile";
+"prompts.llm.section" = "LLM Provider (for translation · summary · cleanup)";
+"prompts.llm.provider" = "Provider";
+"prompts.llm.endpoint" = "Endpoint";
+"prompts.llm.model" = "Model";
+"prompts.llm.apikey" = "API Key";
+"prompts.llm.preset.note" = "Selecting a preset fills in the endpoint and model. You can edit them directly (custom).";
+"prompts.profile.name" = "Name";
+"prompts.profile.unassigned" = "Unassigned";
+"prompts.profile.hotkey.press" = "Press a key…";
+"prompts.profile.hotkey.cancel" = "Press a key… (ESC to cancel)";
+"prompts.trigger.toggle" = "Toggle";
+"prompts.trigger.hold" = "Hold";
+"prompts.llm.toggle" = "LLM";
+"prompts.llm.off.note" = "LLM off — STT + vocabulary correction only (fastest)";
+"prompts.llm.example" = "e.g. \"Translate Korean to natural English\", \"Summarise in 3 bullet points\", \"Rewrite as a formal email\"";
+"prompts.trigger.help" = "Toggle: press once to start and stop | Hold: record while pressed";
+"prompts.getkey" = "Get API key ↗";
+"prompts.testkey" = "Test key";
+"prompts.testing" = "Testing…";
+"prompts.llm.moved.note" = "The shared LLM engine is configured in General so every profile uses the same provider and model.";
+
+/* Vocabulary tab */
+"vocab.title" = "Custom Vocabulary";
+"vocab.note" = "List terms separated by commas or newlines. They are injected as STT context hints so the model corrects phonetically similar speech to the exact spelling.";
+"vocab.count" = "%d terms active";
+"vocab.example" = "Aphex Twin, Four Tet\nFloating Points\nRoland TR-808";
+
+/* History tab */
+"history.title" = "Dictation History";
+"history.note" = "Stores the raw transcript and the LLM-processed result side by side. Click any entry to copy.";
+"history.empty" = "No history yet.";
+"history.delete.all" = "Delete all";
+"history.raw.show" = "Show raw (STT)";
+"history.raw.hide" = "Hide raw";
+"history.empty.result" = "(empty result)";
+"history.copy" = "Copy";
+"history.copied" = "Copied";
+"history.unpasted" = "not pasted";
+
+/* Onboarding */
+"onboarding.welcome.title" = "Welcome to VoiceType";
+"onboarding.window.title" = "VoiceType Setup";
+"onboarding.welcome.subtitle" = "Press your dictation shortcut, speak, and the text appears at your cursor when you stop. Built for fast real-time multilingual dictation.";
+"onboarding.welcome.free" = "VoiceType is free and runs no server.";
+"onboarding.welcome.key" = "Speech recognition and AI run directly with your API keys — VoiceType charges nothing.";
+"onboarding.welcome.cost" = "API usage fees go directly to the provider (Soniox, Deepgram, etc.).";
+"onboarding.mic.title" = "Microphone access";
+"onboarding.mic.subtitle" = "Required to capture audio for transcription.";
+"onboarding.mic.granted" = "Granted";
+"onboarding.mic.denied" = "Denied";
+"onboarding.mic.open" = "Open in System Settings";
+"onboarding.mic.request" = "Request microphone access";
+"onboarding.ax.title" = "Accessibility permission";
+"onboarding.ax.subtitle" = "Required to auto-paste the transcript at your cursor (Cmd+V synthesis).\n(Without it, the result is always copied to clipboard — paste manually.)";
+"onboarding.ax.open" = "Open Accessibility settings";
+"onboarding.ax.note" = "Enable VoiceType in the list, then click Next. (Can also be done later in Settings.)";
+"onboarding.key.title" = "STT API Key";
+"onboarding.key.subtitle" = "Pick the STT engine that fits your workflow. Deepgram is a fast default, and Soniox is strong for mixed-language speech.";
+"onboarding.key.engine" = "Engine";
+"onboarding.key.getkey" = "Get API key ↗";
+"onboarding.key.paste" = "Paste API key";
+"onboarding.key.test" = "Test key";
+"onboarding.key.testing" = "Testing…";
+"onboarding.done.title" = "Ready!";
+"onboarding.done.hint1" = "Option+Space — dictation (press again to stop)";
+"onboarding.done.hint2" = "Option+Shift+Space — translate to English";
+"onboarding.done.hint3" = "Access history and settings via the 🎙 menu bar icon";
+"onboarding.done.note" = "Prompts, vocabulary, and hotkeys can be changed anytime in Settings.";
+"onboarding.btn.next" = "Next";
+"onboarding.btn.prev" = "Back";
+"onboarding.btn.save" = "Save and continue";
+"onboarding.btn.start" = "Get started";
