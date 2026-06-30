@@ -2,9 +2,13 @@
 
 Free, open-source macOS dictation with real-time streaming STT — bring your own API key.
 
+[![Download](https://img.shields.io/github/v/release/gyujeongion/voicetype?label=Download&logo=apple&color=000)](https://github.com/gyujeongion/voicetype/releases/latest/download/VoiceType-1.0.0.dmg)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6-FA7343?logo=swift)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue)
+
+> **[⬇ Download VoiceType 1.0.0 (DMG)](https://github.com/gyujeongion/voicetype/releases/latest/download/VoiceType-1.0.0.dmg)** — macOS 14+  
+> Open DMG → drag to Applications → launch → grant Microphone + Accessibility permissions.
 
 ---
 
