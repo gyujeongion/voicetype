@@ -331,11 +331,29 @@ struct SettingsView: View {
                             Text(profile.name).tag(Optional(profile.id))
                         }
                     }
-                    Stepper(
-                        t("output.space.sensitivity") + ": \(vm.settings.spaceBarThreshold)",
-                        value: $vm.settings.spaceBarThreshold,
-                        in: 2...8
-                    )
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(t("output.space.sensitivity"))
+                            Spacer()
+                            Text("\(vm.settings.spaceBarThreshold)")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(
+                            value: Binding(
+                                get: { Double(vm.settings.spaceBarThreshold) },
+                                set: { vm.settings.spaceBarThreshold = Int($0.rounded()) }
+                            ),
+                            in: 2...10,
+                            step: 1
+                        ) {
+                            EmptyView()
+                        } minimumValueLabel: {
+                            Text("2").font(.caption2).foregroundStyle(.secondary)
+                        } maximumValueLabel: {
+                            Text("10").font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
                     HStack {
                         Text(t("output.space.excluded"))
                             .foregroundStyle(.secondary)
