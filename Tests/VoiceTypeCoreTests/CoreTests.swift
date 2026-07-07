@@ -229,3 +229,43 @@ final class AppSettingsTests: XCTestCase {
     }
 
 }
+
+/// LLM 프로바이더별 Keychain 슬롯 라우팅 (council 반영: normalize + Custom 해시 분리)
+final class LLMKeychainAccountTests: XCTestCase {
+    func testKnownProviderGetsStableSlot() {
+        let ep = "https://api.openai.com/v1/chat/completions"
+        XCTAssertEqual(LLMPresets.keychainAccount(endpoint: ep), "llm_api_key.OpenAI")
+    }
+
+    func testTrailingSlashAndCaseStillMatchKnownProvider() {
+        // 표기 흔들려도 Custom으로 새지 않고 같은 프로바이더 슬롯으로 라우팅
+        let a = LLMPresets.keychainAccount(endpoint: "https://api.openai.com/v1/chat/completions")
+        let b = LLMPresets.keychainAccount(endpoint: "https://api.openai.com/v1/chat/completions/")
+        let c = LLMPresets.keychainAccount(endpoint: "  HTTPS://API.OpenAI.com/v1/chat/completions  ")
+        XCTAssertEqual(a, "llm_api_key.OpenAI")
+        XCTAssertEqual(a, b)
+        XCTAssertEqual(a, c)
+    }
+
+    func testDifferentProvidersGetDifferentSlots() {
+        let openai = LLMPresets.keychainAccount(endpoint: "https://api.openai.com/v1/chat/completions")
+        let deepseek = LLMPresets.keychainAccount(endpoint: "https://api.deepseek.com/v1/chat/completions")
+        XCTAssertNotEqual(openai, deepseek)
+        XCTAssertEqual(deepseek, "llm_api_key.DeepSeek")
+    }
+
+    func testDistinctCustomEndpointsDoNotCollide() {
+        // council HIGH 지적: 여러 커스텀 endpoint가 단일 Custom 슬롯 공유하던 문제 해결 확인
+        let x = LLMPresets.keychainAccount(endpoint: "https://api.foo.example/v1/chat/completions")
+        let y = LLMPresets.keychainAccount(endpoint: "https://api.bar.example/v1/chat/completions")
+        XCTAssertNotEqual(x, y)
+        XCTAssertTrue(x.hasPrefix("llm_api_key.custom_"))
+        XCTAssertTrue(y.hasPrefix("llm_api_key.custom_"))
+    }
+
+    func testSameCustomEndpointStableAcrossFormatting() {
+        let x = LLMPresets.keychainAccount(endpoint: "https://api.foo.example/v1/chat/completions")
+        let y = LLMPresets.keychainAccount(endpoint: "https://api.foo.example/v1/chat/completions/")
+        XCTAssertEqual(x, y)
+    }
+}

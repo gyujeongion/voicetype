@@ -20,7 +20,7 @@ final class SettingsViewModel: ObservableObject {
         didSet { SettingsStore.shared.setSTTAPIKey(sttKey, for: settings.stt.provider) }
     }
     @Published var llmKey: String {
-        didSet { SettingsStore.shared.llmAPIKey = llmKey }
+        didSet { SettingsStore.shared.setLLMAPIKey(llmKey, for: settings.llm.endpoint) }
     }
     @Published var devices: [AudioInputDevice] = []
     /// 단축키 캡처 중인 프로파일 id (nil이면 캡처 안 함)
@@ -33,7 +33,7 @@ final class SettingsViewModel: ObservableObject {
         let store = SettingsStore.shared
         self.settings = store.settings
         self.sttKey = store.sttAPIKey(for: store.settings.stt.provider) ?? ""
-        self.llmKey = store.llmAPIKey ?? ""
+        self.llmKey = store.llmAPIKey(for: store.settings.llm.endpoint) ?? ""
         refreshDevices()
     }
 
@@ -173,7 +173,16 @@ final class SettingsViewModel: ObservableObject {
         guard !preset.isCustom else { return }  // 커스텀은 직접 입력 유지
         settings.llm.endpoint = preset.endpoint
         settings.llm.model = preset.defaultModel
+        // 키 입력란을 해당 프로바이더의 저장된 키로 갱신 (STT applySTTPreset과 동일)
+        llmKey = SettingsStore.shared.llmAPIKey(for: preset.endpoint) ?? ""
         llmTestResult = nil
+    }
+
+    /// endpoint를 직접 타이핑으로 편집했을 때 키 입력란을 그 endpoint의 저장된 키로 다시 로드.
+    /// (프리셋 Picker는 applyLLMPreset이 처리 — 이건 endpoint TextField 직접 편집 대응)
+    func reloadLLMKeyForCurrentEndpoint() {
+        let stored = SettingsStore.shared.llmAPIKey(for: settings.llm.endpoint) ?? ""
+        if stored != llmKey { llmKey = stored }
     }
 
     func selectLocalLLMModel(_ model: String) {

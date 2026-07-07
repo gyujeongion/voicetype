@@ -139,7 +139,7 @@ final class DictationController {
                 out = await PostProcessRunner.run(transcript: out,
                                                   instruction: profile.instruction,
                                                   llm: settings.llm,
-                                                  apiKey: store.llmAPIKey,
+                                                  apiKey: store.llmAPIKey(for: settings.llm.endpoint),
                                                   glossary: settings.dictionary.hintTerms())
             }
             // 단어사전은 STT context.terms 로 인식 단계에서 이미 교정됨 (별도 후처리 불필요)

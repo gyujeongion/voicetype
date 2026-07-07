@@ -26,7 +26,7 @@ enum Diagnostics {
 
         let provider = s.stt.provider.rawValue
         let sttKey = (SettingsStore.shared.sttAPIKey(for: s.stt.provider)?.isEmpty == false) ? "설정됨" : "없음"
-        let llmKey = (SettingsStore.shared.llmAPIKey?.isEmpty == false) ? "설정됨" : "없음"
+        let llmKey = (SettingsStore.shared.llmAPIKey(for: s.llm.endpoint)?.isEmpty == false) ? "설정됨" : "없음"
 
         return """
         VoiceType 진단 정보
