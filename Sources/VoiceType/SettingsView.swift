@@ -113,6 +113,9 @@ struct SettingsView: View {
                 LabeledRow(t("prompts.llm.endpoint")) {
                     TextField(vm.llmUsesLocalEndpoint ? "http://127.0.0.1:11434/v1/chat/completions" : "https://…/v1/chat/completions",
                               text: $vm.settings.llm.endpoint)
+                        .onChange(of: vm.settings.llm.endpoint) { _, _ in
+                            vm.reloadLLMKeyForCurrentEndpoint()
+                        }
                 }
 
                 LabeledRow(t("prompts.llm.model")) {
