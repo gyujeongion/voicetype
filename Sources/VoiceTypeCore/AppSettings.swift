@@ -6,6 +6,16 @@ public enum TriggerMode: String, Codable, CaseIterable, Sendable {
     case pushToTalk
 }
 
+/// 녹음 인디케이터(화면 상단 플로팅) 디자인.
+public enum IndicatorStyle: String, Codable, CaseIterable, Sendable {
+    case classic     // 빨간 점 펄스 + '녹음 중' 텍스트 + 레벨 막대 (기존)
+    case waveform    // 슬림 다크 캡슐, 실시간 파형만 (텍스트·점 없음)
+    case aurora      // 프로스티드 글래스 pill + 움직이는 그라데이션 글로우
+    case orb         // 숨쉬는 글로우 점 하나 (캡슐·텍스트 없음)
+    case minimal     // 상단 얇은 선 — 거의 티 안 남
+    case off         // 표시 안 함
+}
+
 /// Dictation profile — each profile has its own hotkey and processing mode.
 public struct PromptProfile: Codable, Identifiable, Sendable {
     public var id: UUID
@@ -82,6 +92,9 @@ public struct AppSettings: Codable, Sendable {
     /// Space 꾹누르기를 비활성화할 앱 bundle id 목록
     public var spaceBarExcludedAppBundleIDs: [String]
 
+    /// 녹음 인디케이터 디자인
+    public var indicatorStyle: IndicatorStyle
+
     public init(profiles: [PromptProfile]? = nil,
                 microphonePriority: [String] = [],
                 selectedMicrophoneUID: String? = nil,
@@ -95,7 +108,8 @@ public struct AppSettings: Codable, Sendable {
                 spaceBarTrigger: Bool = false,
                 spaceBarThreshold: Int = 3,
                 spaceBarProfileID: UUID? = nil,
-                spaceBarExcludedAppBundleIDs: [String] = []) {
+                spaceBarExcludedAppBundleIDs: [String] = [],
+                indicatorStyle: IndicatorStyle = .waveform) {
         self.profiles = profiles ?? AppSettings.defaultProfiles
         self.microphonePriority = microphonePriority
         self.selectedMicrophoneUID = selectedMicrophoneUID
@@ -110,12 +124,14 @@ public struct AppSettings: Codable, Sendable {
         self.spaceBarThreshold = spaceBarThreshold
         self.spaceBarProfileID = spaceBarProfileID
         self.spaceBarExcludedAppBundleIDs = spaceBarExcludedAppBundleIDs
+        self.indicatorStyle = indicatorStyle
     }
 
     enum CodingKeys: String, CodingKey {
         case profiles, microphonePriority, selectedMicrophoneUID, languageHints, dictionary, llm, stt
         case autoPaste, copyToClipboard, appLanguage
         case spaceBarTrigger, spaceBarThreshold, spaceBarProfileID, spaceBarExcludedAppBundleIDs
+        case indicatorStyle
     }
 
     // 관대한 디코딩 — 향후 필드 추가/변경에도 기존 설정(특히 프로파일)을 최대한 보존
@@ -135,6 +151,7 @@ public struct AppSettings: Codable, Sendable {
         spaceBarThreshold = (try? c.decode(Int.self, forKey: .spaceBarThreshold)) ?? 3
         spaceBarProfileID = try? c.decodeIfPresent(UUID.self, forKey: .spaceBarProfileID)
         spaceBarExcludedAppBundleIDs = (try? c.decode([String].self, forKey: .spaceBarExcludedAppBundleIDs)) ?? []
+        indicatorStyle = (try? c.decode(IndicatorStyle.self, forKey: .indicatorStyle)) ?? .waveform
     }
 
     /// Default profiles: Option+Space for dictation, Option+Shift+Space for English translation.

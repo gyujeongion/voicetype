@@ -13,9 +13,28 @@ enum AppMain {
             return
         }
 
-        // 인디케이터 미리보기 (비주얼 검증용)
-        if args.contains("--preview-indicator") {
-            IndicatorPreview.run()
+        // 인디케이터 헤드리스 렌더 (디스플레이 세션 없이 PNG로 픽셀 검증). --render-indicators <출력폴더>
+        if let idx = args.firstIndex(of: "--render-indicators"), idx + 1 < args.count {
+            let dir = args[idx + 1]
+            for style in IndicatorStyle.allCases where style != .off {
+                guard let img = IndicatorRenderer.image(style: style),
+                      let tiff = img.tiffRepresentation,
+                      let rep = NSBitmapImageRep(data: tiff),
+                      let png = rep.representation(using: .png, properties: [:]) else {
+                    FileHandle.standardError.write(Data("render fail: \(style.rawValue)\n".utf8))
+                    continue
+                }
+                let path = (dir as NSString).appendingPathComponent("render_\(style.rawValue).png")
+                try? png.write(to: URL(fileURLWithPath: path))
+                print("\(style.rawValue): \(img.size) -> \(path)")
+            }
+            return
+        }
+
+        // 인디케이터 미리보기 (비주얼 검증용). --preview-indicator [스타일] (기본 waveform)
+        if let idx = args.firstIndex(of: "--preview-indicator") {
+            let style = (idx + 1 < args.count ? IndicatorStyle(rawValue: args[idx + 1]) : nil) ?? .waveform
+            IndicatorPreview.run(style: style)
             return
         }
 

@@ -1,13 +1,15 @@
 import AppKit
 import Foundation
+import VoiceTypeCore
 
 /// 녹음 인디케이터 비주얼 미리보기 (마이크 없이). 가짜 레벨로 막대 출렁임 재현.
 @MainActor
 enum IndicatorPreview {
-    static func run() {
+    static func run(style: IndicatorStyle = .waveform) {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
         let ctrl = RecordingIndicatorController()
+        ctrl.setStyle(style)
         ctrl.setMode(.recording)
         ctrl.setCaption("녹음 중")
         ctrl.show()
