@@ -323,6 +323,31 @@ struct SettingsView: View {
                     .font(.caption2).foregroundStyle(.secondary)
             }
 
+            Section(t("indicator.section")) {
+                Picker(t("indicator.style"), selection: $vm.settings.indicatorStyle) {
+                    ForEach(IndicatorStyle.allCases, id: \.self) { style in
+                        Text(localization.text("indicator.style.\(style.rawValue)")).tag(style)
+                    }
+                }
+                .onChange(of: vm.settings.indicatorStyle) { _, newValue in
+                    NotificationCenter.default.post(name: .voiceTypeIndicatorPreview,
+                                                    object: nil,
+                                                    userInfo: ["style": newValue.rawValue])
+                }
+                HStack {
+                    Text(t("indicator.note"))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button(t("indicator.preview")) {
+                        NotificationCenter.default.post(name: .voiceTypeIndicatorPreview,
+                                                        object: nil,
+                                                        userInfo: ["style": vm.settings.indicatorStyle.rawValue])
+                    }
+                    .font(.caption)
+                    .disabled(vm.settings.indicatorStyle == .off)
+                }
+            }
+
             Section(t("output.space.section")) {
                 Toggle(t("output.space.toggle"), isOn: $vm.settings.spaceBarTrigger)
                 if vm.settings.spaceBarTrigger {

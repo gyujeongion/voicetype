@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
     private lazy var settingsVM = SettingsViewModel()
     private var onboarding: OnboardingController?
+    private var previewTimer: Timer?
 
     private var l: LocalizationManager { .shared }
 
@@ -30,6 +31,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupSpaceTrigger()
         SettingsStore.shared.onChange = { [weak self] _ in
             self?.refreshLocalizedUI()
+        }
+        // 설정에서 인디케이터 디자인을 바꾸면 실제 오버레이로 잠깐 미리보기
+        NotificationCenter.default.addObserver(forName: .voiceTypeIndicatorPreview, object: nil, queue: .main) { [weak self] note in
+            let raw = note.userInfo?["style"] as? String
+            MainActor.assumeIsolated {
+                guard let self = self, let raw = raw, let style = IndicatorStyle(rawValue: raw) else { return }
+                self.previewIndicator(style)
+            }
         }
         _ = UpdaterManager.shared   // Sparkle 자동 업데이트 시작 (스케줄 체크)
 
@@ -104,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch state {
             case .starting:  break  // transitional — no UI change
             case .recording:
+                self.indicator.setStyle(SettingsStore.shared.settings.indicatorStyle)
                 self.indicator.setMode(.recording)
                 self.indicator.setCaption(self.l.text("indicator.recording"))
                 self.indicator.show()
@@ -123,6 +133,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         dictation.onLevel = { [weak self] level in
             self?.indicator.setLevel(level)
+        }
+    }
+
+    /// 설정에서 디자인을 고르면 실제 인디케이터를 약 2.6초간 띄워 가짜 레벨로 미리 보여준다.
+    private func previewIndicator(_ style: IndicatorStyle) {
+        previewTimer?.invalidate()
+        guard style != .off else { indicator.hide(); return }
+        indicator.setStyle(style)
+        indicator.setMode(.recording)
+        indicator.setCaption(l.text("indicator.recording"))
+        indicator.show()
+        let start = Date()
+        previewTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                let t = Date().timeIntervalSince(start)
+                if t > 2.6 {
+                    self.previewTimer?.invalidate()
+                    self.previewTimer = nil
+                    self.indicator.hide()
+                    return
+                }
+                let base = abs(sin(t * 3.1)) * 0.10
+                let flutter = abs(sin(t * 11.0)) * 0.05
+                self.indicator.setLevel(Float(base + flutter))
+            }
         }
     }
 
@@ -258,4 +294,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildStatusMenu()
         settingsWindow?.title = l.text("window.settings")
     }
+}
+
+extension Notification.Name {
+    /// 설정에서 인디케이터 디자인을 바꿀 때 실제 오버레이 미리보기를 요청
+    static let voiceTypeIndicatorPreview = Notification.Name("voicetype.indicatorPreview")
 }

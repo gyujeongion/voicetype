@@ -23,6 +23,16 @@
 "alert.copy_diagnostics" = "Copy Diagnostics";
 "indicator.recording" = "Recording";
 "indicator.processing" = "Transcribing…";
+"indicator.section" = "Recording indicator";
+"indicator.style" = "Design";
+"indicator.note" = "The indicator shown at the top of the screen while recording.";
+"indicator.preview" = "Preview";
+"indicator.style.classic" = "Classic (red dot)";
+"indicator.style.waveform" = "Waveform";
+"indicator.style.aurora" = "Aurora glow";
+"indicator.style.orb" = "Breathing orb";
+"indicator.style.minimal" = "Minimal (subtle)";
+"indicator.style.off" = "Off";
 "mic.level.running" = "Input detected";
 "mic.level.stopped" = "Input check off";
 

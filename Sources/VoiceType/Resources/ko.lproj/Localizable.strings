@@ -23,6 +23,16 @@
 "alert.copy_diagnostics" = "진단 정보 복사";
 "indicator.recording" = "녹음 중";
 "indicator.processing" = "받아쓰는 중…";
+"indicator.section" = "녹음 인디케이터";
+"indicator.style" = "디자인";
+"indicator.note" = "녹음 중 화면 상단에 뜨는 표시입니다.";
+"indicator.preview" = "미리보기";
+"indicator.style.classic" = "클래식 (빨간 점)";
+"indicator.style.waveform" = "파형";
+"indicator.style.aurora" = "오로라 글로우";
+"indicator.style.orb" = "숨쉬는 점";
+"indicator.style.minimal" = "미니멀 (거의 안 보임)";
+"indicator.style.off" = "표시 안 함";
 "mic.level.running" = "입력 감지 중";
 "mic.level.stopped" = "입력 확인 꺼짐";
 
