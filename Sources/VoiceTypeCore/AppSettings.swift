@@ -97,6 +97,11 @@ public struct AppSettings: Codable, Sendable {
 
     /// 받아쓰기 원본 오디오(m4a)를 Recordings/ 폴더에 함께 저장할지
     public var saveRecordings: Bool
+    /// F5 녹음 핫키 (Carbon keyCode). 96 = F5.
+    public var recordingHotkeyKeyCode: UInt32
+    public var recordingHotkeyModifiers: UInt32
+    /// 녹음 회차 폴더 루트. 빈 문자열이면 기본값(~/Documents/VoiceType Recordings).
+    public var recordingFolderPath: String
 
     public init(profiles: [PromptProfile]? = nil,
                 microphonePriority: [String] = [],
@@ -113,7 +118,10 @@ public struct AppSettings: Codable, Sendable {
                 spaceBarProfileID: UUID? = nil,
                 spaceBarExcludedAppBundleIDs: [String] = [],
                 indicatorStyle: IndicatorStyle = .waveform,
-                saveRecordings: Bool = true) {
+                saveRecordings: Bool = true,
+                recordingHotkeyKeyCode: UInt32 = 96,
+                recordingHotkeyModifiers: UInt32 = 0,
+                recordingFolderPath: String = "") {
         self.profiles = profiles ?? AppSettings.defaultProfiles
         self.microphonePriority = microphonePriority
         self.selectedMicrophoneUID = selectedMicrophoneUID
@@ -130,6 +138,9 @@ public struct AppSettings: Codable, Sendable {
         self.spaceBarExcludedAppBundleIDs = spaceBarExcludedAppBundleIDs
         self.indicatorStyle = indicatorStyle
         self.saveRecordings = saveRecordings
+        self.recordingHotkeyKeyCode = recordingHotkeyKeyCode
+        self.recordingHotkeyModifiers = recordingHotkeyModifiers
+        self.recordingFolderPath = recordingFolderPath
     }
 
     enum CodingKeys: String, CodingKey {
@@ -137,6 +148,7 @@ public struct AppSettings: Codable, Sendable {
         case autoPaste, copyToClipboard, appLanguage
         case spaceBarTrigger, spaceBarThreshold, spaceBarProfileID, spaceBarExcludedAppBundleIDs
         case indicatorStyle, saveRecordings
+        case recordingHotkeyKeyCode, recordingHotkeyModifiers, recordingFolderPath
     }
 
     // 관대한 디코딩 — 향후 필드 추가/변경에도 기존 설정(특히 프로파일)을 최대한 보존
@@ -158,6 +170,9 @@ public struct AppSettings: Codable, Sendable {
         spaceBarExcludedAppBundleIDs = (try? c.decode([String].self, forKey: .spaceBarExcludedAppBundleIDs)) ?? []
         indicatorStyle = (try? c.decode(IndicatorStyle.self, forKey: .indicatorStyle)) ?? .waveform
         saveRecordings = (try? c.decode(Bool.self, forKey: .saveRecordings)) ?? true
+        recordingHotkeyKeyCode = (try? c.decode(UInt32.self, forKey: .recordingHotkeyKeyCode)) ?? 96
+        recordingHotkeyModifiers = (try? c.decode(UInt32.self, forKey: .recordingHotkeyModifiers)) ?? 0
+        recordingFolderPath = (try? c.decode(String.self, forKey: .recordingFolderPath)) ?? ""
     }
 
     /// Default profiles: Option+Space for dictation, Option+Shift+Space for English translation.

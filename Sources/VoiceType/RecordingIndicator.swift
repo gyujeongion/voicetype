@@ -25,6 +25,18 @@ final class RecordingIndicatorController {
     func setLevel(_ level: Float) { model.level = level }
     func setCaption(_ text: String) { model.caption = text }
     func setMode(_ mode: IndicatorModel.Mode) { model.mode = mode }
+    func setSecondaryLevel(_ level: Float) { model.secondaryLevel = level }
+    func setShowsSecondaryLevel(_ shows: Bool) { model.showsSecondaryLevel = shows }
+
+    /// 경과 초를 mm:ss(1시간 넘으면 h:mm:ss)로 표시한다. 0이면 숨긴다.
+    func setElapsed(_ seconds: Double) {
+        guard seconds > 0 else { model.elapsedText = ""; return }
+        let t = Int(seconds)
+        let h = t / 3600, m = (t % 3600) / 60, sec = t % 60
+        model.elapsedText = h > 0
+            ? String(format: "%d:%02d:%02d", h, m, sec)
+            : String(format: "%02d:%02d", m, sec)
+    }
 
     /// 디자인 전환. 떠 있는 상태면 즉시 새 크기로 다시 그린다.
     func setStyle(_ style: IndicatorStyle) {
@@ -87,12 +99,43 @@ final class IndicatorModel: ObservableObject {
     @Published var caption: String = "녹음 중"
     @Published var mode: Mode = .recording
     @Published var style: IndicatorStyle = .waveform
+    /// 시스템 오디오 레벨 (0~1). 녹음 모드에서 두 번째 막대로 표시.
+    @Published var secondaryLevel: Float = 0
+    /// 보조 레벨 막대를 표시할지 (시스템 오디오 트랙이 실제로 붙었을 때만 true)
+    @Published var showsSecondaryLevel: Bool = false
+    /// 경과 시간 표시 문자열. 빈 문자열이면 표시하지 않는다.
+    @Published var elapsedText: String = ""
 }
 
 private struct RecordingIndicatorView: View {
     @ObservedObject var model: IndicatorModel
 
     var body: some View {
+        if model.style == .off {
+            EmptyView()
+        } else {
+            // 녹음 부가 정보(경과 시간·시스템 오디오 레벨)는 스타일 5종 공통으로 여기서 붙인다.
+            // 각 스타일 뷰를 따로 고치면 5곳이 어긋나기 쉽다.
+            HStack(spacing: 8) {
+                styleView
+                if !model.elapsedText.isEmpty {
+                    Text(model.elapsedText)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                if model.showsSecondaryLevel {
+                    // 시스템 오디오 레벨. 마이크 막대와 구분되게 파란 계열.
+                    Capsule()
+                        .fill(Color.blue.opacity(0.75))
+                        .frame(width: 3, height: 4 + CGFloat(norm(model.secondaryLevel)) * 12)
+                        .help("컴퓨터 소리")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var styleView: some View {
         switch model.style {
         case .classic:  ClassicIndicator(model: model)
         case .waveform: WaveformIndicator(model: model)
