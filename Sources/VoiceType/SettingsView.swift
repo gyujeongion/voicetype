@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 import VoiceTypeCore
 
 struct SettingsView: View {
@@ -7,6 +8,7 @@ struct SettingsView: View {
     @ObservedObject var history = HistoryStore.shared
     @EnvironmentObject var localization: LocalizationManager
     @StateObject private var micTester = MicTester()
+    @State private var draggedMicUID: String?
 
     private func t(_ key: String.LocalizationValue) -> String {
         localization.text(key)
@@ -139,7 +141,7 @@ struct SettingsView: View {
                 }
 
                 LabeledRow(vm.llmNeedsAPIKey ? t("prompts.llm.apikey") : t("llm.apikey.optional")) {
-                    SecureField(vm.llmUsesLocalEndpoint ? t("llm.apikey.placeholder.optional") : "sk-…", text: $vm.llmKey)
+                    SecureField(vm.llmUsesLocalEndpoint ? t("llm.apikey.placeholder.optional") : "", text: $vm.llmKey)
                 }
 
                 HStack {
@@ -240,6 +242,13 @@ struct SettingsView: View {
                 } else {
                     ForEach(Array(vm.settings.microphonePriority.enumerated()), id: \.element) { idx, uid in
                         HStack {
+                            Image(systemName: "line.3.horizontal")
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                                .onDrag {
+                                    draggedMicUID = uid
+                                    return NSItemProvider(object: uid as NSString)
+                                }
                             Text("\(idx + 1)")
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
@@ -276,6 +285,7 @@ struct SettingsView: View {
                             .buttonStyle(.borderless)
                         }
                         .padding(.vertical, 2)
+                        .onDrop(of: [.text], delegate: MicPriorityDropDelegate(item: uid, draggedItem: $draggedMicUID, vm: vm))
                     }
                 }
 
@@ -530,6 +540,9 @@ struct SettingsView: View {
             Text(t("history.note"))
                 .font(.caption).foregroundStyle(.secondary)
 
+            Toggle(t("history.saveRecordings"), isOn: $vm.settings.saveRecordings)
+                .toggleStyle(.switch)
+
             if history.entries.isEmpty {
                 Spacer()
                 Text(t("history.empty"))
@@ -541,7 +554,12 @@ struct SettingsView: View {
                     ForEach(history.entries) { entry in
                         HistoryRow(entry: entry,
                                    onCopy: { TextInjector.copyToClipboard(entry.finalText) },
-                                   onDelete: { history.delete(entry.id) })
+                                   onDelete: { history.delete(entry.id) },
+                                   onRevealAudio: {
+                                       if let url = history.audioURL(for: entry) {
+                                           NSWorkspace.shared.activateFileViewerSelecting([url])
+                                       }
+                                   })
                     }
                 }
             }
@@ -628,6 +646,7 @@ private struct HistoryRow: View {
     let entry: HistoryEntry
     let onCopy: () -> Void
     let onDelete: () -> Void
+    let onRevealAudio: () -> Void
     @EnvironmentObject var localization: LocalizationManager
     @State private var showRaw = false
     @State private var copied = false
@@ -675,6 +694,12 @@ private struct HistoryRow: View {
                     Label(copied ? t("history.copied") : t("history.copy"), systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
                 .font(.caption).buttonStyle(.bordered).controlSize(.small)
+                if entry.audioFileName != nil {
+                    Button { onRevealAudio() } label: {
+                        Label(t("history.playAudio"), systemImage: "waveform")
+                    }
+                    .font(.caption).buttonStyle(.bordered).controlSize(.small)
+                }
                 Spacer()
                 Button(role: .destructive) { onDelete() } label: {
                     Image(systemName: "trash")
@@ -698,5 +723,28 @@ private struct LabeledRow<Content: View>: View {
             Text(label).frame(width: 80, alignment: .leading).foregroundStyle(.secondary)
             content()
         }
+    }
+}
+
+/// 마이크 우선순위 목록 드래그 재정렬 — 드래그 중인 항목이 드롭 대상 위로 오면 실시간으로 자리를 바꾼다.
+private struct MicPriorityDropDelegate: DropDelegate {
+    let item: String
+    @Binding var draggedItem: String?
+    let vm: SettingsViewModel
+
+    func dropEntered(info: DropInfo) {
+        guard let dragged = draggedItem, dragged != item,
+              let from = vm.settings.microphonePriority.firstIndex(of: dragged),
+              let to = vm.settings.microphonePriority.firstIndex(of: item) else { return }
+        vm.movePriority(from: IndexSet(integer: from), to: to > from ? to + 1 : to)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggedItem = nil
+        return true
     }
 }
