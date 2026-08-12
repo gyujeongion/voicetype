@@ -341,14 +341,9 @@ final class SettingsViewModel: ObservableObject {
                              priority: settings.microphonePriority)?.deviceID
     }
     var activeInputDeviceName: String {
-        if let selectedUID = settings.selectedMicrophoneUID,
-           let device = devices.first(where: { $0.id == selectedUID }) {
+        if let device = AudioDevices.resolve(selectedUID: settings.selectedMicrophoneUID,
+                                              priority: settings.microphonePriority) {
             return device.name
-        }
-        for uid in settings.microphonePriority {
-            if let device = devices.first(where: { $0.id == uid }) {
-                return device.name
-            }
         }
         if let defaultID = AudioDevices.defaultInputDevice(),
            let device = devices.first(where: { $0.deviceID == defaultID }) {

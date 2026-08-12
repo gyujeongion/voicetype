@@ -51,7 +51,10 @@ enum AudioDevices {
 
     /// 명시 선택이 연결되어 있으면 그것을 우선 사용하고, 없으면 우선순위 목록을 본다.
     /// 둘 다 없으면 nil을 반환하여 시스템 기본 입력을 그대로 사용한다.
+    /// 단, 현재 기본 출력 장치가 에어팟류(블루투스+"AirPods")면 그 장치를 무조건 최우선으로 강제한다.
+    /// (출력·입력이 물리적으로 한 장치이므로 "출력=입력" 일치는 곧 같은 deviceID를 쓰는 것과 같다.)
     static func resolve(selectedUID: String?, priority: [String]) -> AudioInputDevice? {
+        if let airpods = airPodsOutputAsInputDevice() { return airpods }
         let available = inputDevices()
         if let selectedUID,
            let selected = available.first(where: { $0.id == selectedUID }) {
@@ -102,6 +105,42 @@ enum AudioDevices {
         return dev
     }
 
+    static func defaultOutputDevice() -> AudioDeviceID? {
+        var dev = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &dev) == noErr else {
+            return nil
+        }
+        return dev
+    }
+
+    /// 현재 기본 출력 장치가 에어팟류이면서(블루투스 트랜스포트 + 이름에 "AirPods") 동시에
+    /// 마이크 입력도 지원하면 그 장치를 반환한다. 특정 기기의 UID·이름을 하드코딩하지 않고
+    /// "에어팟이라는 제품군인지"만 일반적으로 판별하므로 어떤 세대의 AirPods/AirPods Max든 그대로 통한다.
+    private static func airPodsOutputAsInputDevice() -> AudioInputDevice? {
+        guard let outputID = defaultOutputDevice(),
+              isAirPodsFamily(outputID),
+              hasInputChannels(outputID),
+              let uid = stringProperty(outputID, kAudioDevicePropertyDeviceUID),
+              let rawName = stringProperty(outputID, kAudioDevicePropertyDeviceNameCFString)
+                ?? stringProperty(outputID, kAudioObjectPropertyName)
+        else { return nil }
+        return AudioInputDevice(id: uid, name: friendlyName(rawName), deviceID: outputID)
+    }
+
+    private static func isAirPodsFamily(_ dev: AudioDeviceID) -> Bool {
+        guard let transport = uint32Property(dev, kAudioDevicePropertyTransportType),
+              transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE
+        else { return false }
+        guard let name = stringProperty(dev, kAudioDevicePropertyDeviceNameCFString) ?? stringProperty(dev, kAudioObjectPropertyName)
+        else { return false }
+        return name.localizedCaseInsensitiveContains("airpods")
+    }
+
     // MARK: - helpers
 
     private static func hasInputChannels(_ dev: AudioDeviceID) -> Bool {
@@ -133,6 +172,17 @@ enum AudioDevices {
         }
         guard status == noErr, let s = cf as String? else { return nil }
         return s
+    }
+
+    private static func uint32Property(_ dev: AudioDeviceID, _ selector: AudioObjectPropertySelector) -> UInt32? {
+        var addr = AudioObjectPropertyAddress(
+            mSelector: selector,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        var value: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        guard AudioObjectGetPropertyData(dev, &addr, 0, nil, &size, &value) == noErr else { return nil }
+        return value
     }
 
     /// 일부 USB 장치는 사람이 읽을 장치명 대신 CoreAudio UID를 이름으로 돌려준다.
