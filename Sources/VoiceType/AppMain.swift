@@ -31,6 +31,13 @@ enum AppMain {
             return
         }
 
+        // 마이크 녹음 실측 (GUI 없이 캡처 파이프라인 검증). --record-audio [초] (기본 10)
+        if let idx = args.firstIndex(of: "--record-audio") {
+            let seconds = (idx + 1 < args.count ? Double(args[idx + 1]) : nil) ?? 10
+            RecordAudioCLI.run(seconds: seconds)
+            return
+        }
+
         // 인디케이터 미리보기 (비주얼 검증용). --preview-indicator [스타일] (기본 waveform)
         if let idx = args.firstIndex(of: "--preview-indicator") {
             let style = (idx + 1 < args.count ? IndicatorStyle(rawValue: args[idx + 1]) : nil) ?? .waveform

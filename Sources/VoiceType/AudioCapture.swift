@@ -21,6 +21,11 @@ final class AudioCapture {
     var onPCM: ((Data) -> Void)?
     /// 입력 레벨(RMS, 0~1) — 인디케이터 레벨미터용 (메인 스레드로 전달)
     var onLevel: (@Sendable (Float) -> Void)?
+    /// 변환된 PCM + 프레임 수 + 세션 시작 기준 경과 초. 녹음(CAFWriter)용.
+    /// 기존 onPCM은 받아쓰기 STT 전송용으로 그대로 둔다.
+    var onPCMDetailed: ((Data, Int, Double) -> Void)?
+    /// 경과 시각 산출 기준. start()에서 설정된다.
+    private var sessionStartHostTime: UInt64 = 0
 
     init() {
         targetFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
@@ -77,7 +82,25 @@ final class AudioCapture {
             audioFile = nil
             throw CaptureError.engineStart(error)
         }
+        sessionStartHostTime = mach_absolute_time()
         isRunning = true
+    }
+
+    // MARK: - 호스트 시각
+
+    /// mach_absolute_time 차이를 초로 환산한다. timebase는 한 번만 조회해 캐시한다.
+    private static let timebase: mach_timebase_info_data_t = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return info
+    }()
+
+    /// 주어진 호스트 시각 이후 경과한 초. 캡처 경로가 다른 두 트랙을 공통 축에 올리는 데 쓴다.
+    static func secondsSince(_ startHostTime: UInt64) -> Double {
+        guard startHostTime != 0 else { return 0 }
+        let delta = mach_absolute_time() &- startHostTime
+        let nanos = Double(delta) * Double(timebase.numer) / Double(timebase.denom)
+        return nanos / 1_000_000_000
     }
 
     func stop() {
@@ -105,7 +128,8 @@ final class AudioCapture {
     // MARK: - 변환
 
     private func process(_ buffer: AVAudioPCMBuffer) {
-        guard let converter = converter, let onPCM = onPCM else { return }
+        // 받아쓰기는 onPCM만, 녹음은 onPCMDetailed만 쓴다. 둘 다 없을 때만 건너뛴다.
+        guard let converter = converter, onPCM != nil || onPCMDetailed != nil else { return }
         let ratio = targetFormat.sampleRate / buffer.format.sampleRate
         let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 16
         guard let out = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else { return }
@@ -126,7 +150,10 @@ final class AudioCapture {
         let n = Int(out.frameLength)
         let byteCount = n * MemoryLayout<Int16>.size
         let data = Data(bytes: ch[0], count: byteCount)
-        onPCM(data)
+        onPCM?(data)
+        if let onPCMDetailed = onPCMDetailed {
+            onPCMDetailed(data, n, Self.secondsSince(sessionStartHostTime))
+        }
         if let audioFile = audioFile {
             try? audioFile.write(from: out)
         }
