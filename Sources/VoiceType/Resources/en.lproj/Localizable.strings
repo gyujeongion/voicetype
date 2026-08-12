@@ -197,3 +197,7 @@
 "onboarding.btn.prev" = "Back";
 "onboarding.btn.save" = "Save and continue";
 "onboarding.btn.start" = "Get started";
+"recorder.indicator.recording" = "Recording";
+"recorder.indicator.finalizing" = "Saving";
+"recorder.dictation_blocked" = "Dictation is unavailable while recording. Press F5 to stop the recording first.";
+"recorder.recovered" = "Recovered %d recording(s) that did not finish normally.";

@@ -3,7 +3,7 @@ import Foundation
 import CoreAudio
 
 /// AVAudioConverter inputBlock 의 1회 공급 가드 (참조 타입으로 캡처)
-private final class ConsumedFlag: @unchecked Sendable {
+final class ConsumedFlag: @unchecked Sendable {
     var value = false
 }
 

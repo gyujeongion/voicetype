@@ -6,6 +6,10 @@ import VoiceTypeCore
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let dictation = DictationController()
+    private let recorder = RecorderController()
+    /// 녹음 핫키 예약 id. 프로파일은 배열 인덱스(0..n)를 id로 쓰므로 충돌하지 않는다.
+    static let recordingHotkeyID: UInt32 = 9000
+    private var elapsedTimer: Timer?
     private let hotkey = HotkeyManager()
     private let spaceTrigger = SpaceBarTrigger()
     private let indicator = RecordingIndicatorController()
@@ -28,7 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         setupDictation()
         setupHotkey()
+        setupRecorder()
         setupSpaceTrigger()
+        Task { @MainActor in
+            let n = await self.recorder.recoverIncompleteSessions()
+            if n > 0 { self.notify(String(format: self.l.text("recorder.recovered"), n)) }
+        }
         SettingsStore.shared.onChange = { [weak self] _ in
             self?.refreshLocalizedUI()
         }
@@ -136,6 +145,79 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func setupRecorder() {
+        let path = SettingsStore.shared.settings.recordingFolderPath
+        if !path.isEmpty {
+            RecordingStore.shared.rootURL = URL(fileURLWithPath: path, isDirectory: true)
+        }
+        recorder.onStateChange = { [weak self] state in
+            guard let self = self else { return }
+            self.updateRecordingIcon(state)
+            switch state {
+            case .recording:
+                self.indicator.setStyle(SettingsStore.shared.settings.indicatorStyle)
+                self.indicator.setMode(.recording)
+                self.indicator.setCaption(self.l.text("recorder.indicator.recording"))
+                self.indicator.show()
+                self.startElapsedTimer()
+            case .stopping, .finalizing:
+                self.stopElapsedTimer()
+                self.indicator.setMode(.processing)
+                self.indicator.setCaption(self.l.text("recorder.indicator.finalizing"))
+            case .idle:
+                self.stopElapsedTimer()
+                self.indicator.hide()
+            case .starting:
+                break
+            }
+        }
+        recorder.onError = { [weak self] msg in self?.notify(msg) }
+        recorder.onMicLevel = { [weak self] level in self?.indicator.setLevel(level) }
+        recorder.onSystemLevel = { [weak self] level in
+            self?.indicator.setShowsSecondaryLevel(true)
+            self?.indicator.setSecondaryLevel(level)
+        }
+        recorder.onFinished = { folder in
+            NSWorkspace.shared.activateFileViewerSelecting([folder])
+        }
+    }
+
+    private func updateRecordingIcon(_ state: RecorderController.State) {
+        guard let button = statusItem.button else { return }
+        switch state {
+        case .idle:
+            updateIcon(.idle)
+        case .starting, .recording:
+            button.image = NSImage(systemSymbolName: "record.circle.fill",
+                                   accessibilityDescription: "VoiceType 녹음 중")
+            button.image?.isTemplate = true
+            button.contentTintColor = .systemRed
+        case .stopping, .finalizing:
+            button.image = NSImage(systemSymbolName: "ellipsis.circle",
+                                   accessibilityDescription: "VoiceType 처리 중")
+            button.image?.isTemplate = true
+            button.contentTintColor = nil
+        }
+    }
+
+    private func startElapsedTimer() {
+        elapsedTimer?.invalidate()
+        indicator.setElapsed(0)
+        elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                self.indicator.setElapsed(self.recorder.elapsedSeconds)
+            }
+        }
+    }
+
+    private func stopElapsedTimer() {
+        elapsedTimer?.invalidate()
+        elapsedTimer = nil
+        indicator.setElapsed(0)
+        indicator.setShowsSecondaryLevel(false)
+    }
+
     /// 설정에서 디자인을 고르면 실제 인디케이터를 약 2.6초간 띄워 가짜 레벨로 미리 보여준다.
     private func previewIndicator(_ style: IndicatorStyle) {
         previewTimer?.invalidate()
@@ -165,6 +247,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupHotkey() {
         hotkey.onTrigger = { [weak self] id in
             guard let self = self else { return }
+            if id == Self.recordingHotkeyID {
+                self.recorder.toggle()
+                return
+            }
+            // 녹음이 마이크를 점유하는 동안에는 받아쓰기를 막는다
+            if self.recorder.isRecording {
+                self.notify(self.l.text("recorder.dictation_blocked"))
+                return
+            }
             let profiles = SettingsStore.shared.settings.profiles
             let idx = Int(id)
             guard idx >= 0, idx < profiles.count else { return }
@@ -172,6 +263,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotkey.onRelease = { [weak self] id in
             guard let self = self else { return }
+            if id == Self.recordingHotkeyID { return }   // 녹음은 토글이라 release를 쓰지 않는다
             let profiles = SettingsStore.shared.settings.profiles
             let idx = Int(id)
             guard idx >= 0, idx < profiles.count else { return }
@@ -186,7 +278,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupSpaceTrigger() {
         spaceTrigger.onActivate = { [weak self] in
-            guard let self,
+            guard let self, !self.recorder.isRecording,
                   let profile = self.spaceBarProfile() else { return }
             var p = profile
             p.triggerMode = .pushToTalk
@@ -214,10 +306,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerProfileHotkeys() {
-        let profiles = SettingsStore.shared.settings.profiles
-        let keys = profiles.enumerated().map {
+        let s = SettingsStore.shared.settings
+        var keys = s.profiles.enumerated().map {
             (id: UInt32($0.offset), keyCode: $0.element.hotkeyKeyCode, modifiers: $0.element.hotkeyModifiers)
         }
+        keys.append((id: Self.recordingHotkeyID,
+                     keyCode: s.recordingHotkeyKeyCode,
+                     modifiers: s.recordingHotkeyModifiers))
         hotkey.registerAll(keys)
     }
 

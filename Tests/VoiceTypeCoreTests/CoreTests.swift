@@ -413,3 +413,29 @@ final class TrackClockTests: XCTestCase {
         XCTAssertEqual(rec.reason, "capture_gap")
     }
 }
+
+final class RecordingSettingsTests: XCTestCase {
+    /// 기존 settings.json에는 녹음 필드가 없다. 기본값이 채워지고 기존 값은 살아남아야 한다.
+    func testLegacySettingsGainRecordingDefaults() throws {
+        let json = """
+        {"autoPaste":true,"profiles":[{"id":"\(UUID().uuidString)","name":"받아쓰기",
+        "hotkeyKeyCode":100,"hotkeyModifiers":0,"useLLM":true,"instruction":"x",
+        "triggerMode":"toggle"}]}
+        """.data(using: .utf8)!
+        let s = try JSONDecoder().decode(AppSettings.self, from: json)
+        XCTAssertEqual(s.recordingHotkeyKeyCode, 96, "F5")
+        XCTAssertEqual(s.recordingHotkeyModifiers, 0)
+        XCTAssertEqual(s.recordingFolderPath, "")
+        XCTAssertEqual(s.profiles.count, 1)
+        XCTAssertEqual(s.profiles.first?.name, "받아쓰기")
+    }
+
+    func testRecordingSettingsRoundTrip() throws {
+        var s = AppSettings()
+        s.recordingHotkeyKeyCode = 97
+        s.recordingFolderPath = "/tmp/rec"
+        let back = try JSONDecoder().decode(AppSettings.self, from: try JSONEncoder().encode(s))
+        XCTAssertEqual(back.recordingHotkeyKeyCode, 97)
+        XCTAssertEqual(back.recordingFolderPath, "/tmp/rec")
+    }
+}

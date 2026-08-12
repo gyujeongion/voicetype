@@ -197,3 +197,7 @@
 "onboarding.btn.prev" = "이전";
 "onboarding.btn.save" = "저장하고 계속";
 "onboarding.btn.start" = "시작하기";
+"recorder.indicator.recording" = "녹음 중";
+"recorder.indicator.finalizing" = "저장 중";
+"recorder.dictation_blocked" = "녹음 중에는 받아쓰기를 사용할 수 없습니다. F5로 녹음을 먼저 종료하세요.";
+"recorder.recovered" = "정상 종료되지 않은 녹음 %d건을 복구했습니다.";
