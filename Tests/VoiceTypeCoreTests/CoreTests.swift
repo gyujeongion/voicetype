@@ -269,3 +269,147 @@ final class LLMKeychainAccountTests: XCTestCase {
         XCTAssertEqual(x, y)
     }
 }
+
+// MARK: - F5 녹음기
+
+final class RecordingIDTests: XCTestCase {
+    private let kst = TimeZone(identifier: "Asia/Seoul")!
+
+    private func date(_ y: Int, _ mo: Int, _ d: Int, _ h: Int, _ mi: Int, _ s: Int) -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = kst
+        var c = DateComponents()
+        c.year = y; c.month = mo; c.day = d; c.hour = h; c.minute = mi; c.second = s
+        return cal.date(from: c)!
+    }
+
+    func testFormatIsYYMMDDHHMMSSWithSuffix() {
+        XCTAssertEqual(RecordingID.make(from: date(2026, 8, 13, 14, 30, 5),
+                                        random: "a1b2", timeZone: kst),
+                       "260813_143005_a1b2")
+    }
+
+    func testSameMinuteDifferentSecondsDoNotCollide() {
+        let a = RecordingID.make(from: date(2026, 8, 13, 14, 30, 5), random: "aaaa", timeZone: kst)
+        let b = RecordingID.make(from: date(2026, 8, 13, 14, 30, 6), random: "aaaa", timeZone: kst)
+        XCTAssertNotEqual(a, b)
+    }
+
+    func testRandomSuffixIsFourLowercaseHexChars() {
+        for _ in 0..<50 {
+            let s = RecordingID.randomSuffix()
+            XCTAssertEqual(s.count, 4)
+            XCTAssertTrue(s.allSatisfy { "0123456789abcdef".contains($0) }, "잘못된 문자: \(s)")
+        }
+    }
+}
+
+final class RecordingSessionTests: XCTestCase {
+    private func sample() -> RecordingSession {
+        RecordingSession(
+            id: "260813_143005_a1b2",
+            startedAt: Date(timeIntervalSince1970: 1_786_000_000),
+            durationSeconds: 4331.2,
+            captureStatus: .done,
+            tracks: [
+                TrackInfo(kind: .mic, fileName: "mic.m4a", durationSeconds: 4331.2),
+                TrackInfo(kind: .system, fileName: "system.m4a", durationSeconds: 4330.9,
+                          discontinuities: [DiscontinuityRecord(fileTime: 1200.0, wallTime: 1203.5,
+                                                                gapSeconds: 3.5, reason: "capture_gap")]),
+            ],
+            transcriptionStatus: .pending)
+    }
+
+    func testRoundTripEncodeDecode() throws {
+        let original = sample()
+        let data = try JSONEncoder().encode(original)
+        XCTAssertEqual(try JSONDecoder().decode(RecordingSession.self, from: data), original)
+    }
+
+    func testTrackLookup() {
+        let s = sample()
+        XCTAssertEqual(s.track(.mic)?.fileName, "mic.m4a")
+        XCTAssertEqual(s.track(.system)?.discontinuities.count, 1)
+    }
+
+    /// 시스템 트랙이 없는 세션(맥북만 들고 녹음)도 정상이어야 한다.
+    func testMicOnlySessionHasNoSystemTrack() {
+        var s = sample()
+        s.tracks = s.tracks.filter { $0.kind == .mic }
+        XCTAssertNil(s.track(.system))
+        XCTAssertNotNil(s.track(.mic))
+    }
+
+    func testLenientDecodingOfMinimalJSON() throws {
+        let json = #"{"id":"260813_143005_a1b2","startedAt":709171200}"#.data(using: .utf8)!
+        let s = try JSONDecoder().decode(RecordingSession.self, from: json)
+        XCTAssertEqual(s.id, "260813_143005_a1b2")
+        XCTAssertEqual(s.durationSeconds, 0)
+        XCTAssertEqual(s.captureStatus, .failed)
+        XCTAssertTrue(s.tracks.isEmpty)
+        XCTAssertEqual(s.transcriptionStatus, .pending)
+    }
+
+    /// 알 수 없는 status 문자열은 안전한 기본값으로 떨어져야 한다.
+    func testUnknownStatusFallsBack() throws {
+        let json = #"{"id":"x","startedAt":0,"captureStatus":"weird","transcriptionStatus":"weird"}"#
+            .data(using: .utf8)!
+        let s = try JSONDecoder().decode(RecordingSession.self, from: json)
+        XCTAssertEqual(s.captureStatus, .failed)
+        XCTAssertEqual(s.transcriptionStatus, .pending)
+    }
+
+    func testNeedsRecoveryWhenCaptureNotDone() {
+        var s = sample()
+        s.captureStatus = .recording
+        XCTAssertTrue(s.needsRecovery)
+        s.captureStatus = .done
+        XCTAssertFalse(s.needsRecovery)
+    }
+}
+
+final class TrackClockTests: XCTestCase {
+    /// 16kHz에서 1600프레임 = 0.1초
+    func testAdvanceAccumulatesWrittenSeconds() {
+        var c = TrackClock(sampleRate: 16000, gapThreshold: 0.1)
+        c.advance(frameCount: 1600)
+        XCTAssertEqual(c.writtenSeconds, 0.1, accuracy: 1e-9)
+        c.advance(frameCount: 1600)
+        XCTAssertEqual(c.writtenSeconds, 0.2, accuracy: 1e-9)
+    }
+
+    func testNoSilenceWhenWithinThreshold() {
+        var c = TrackClock(sampleRate: 16000, gapThreshold: 0.1)
+        c.advance(frameCount: 16000)
+        XCTAssertNil(c.silenceNeeded(atWallTime: 1.05))
+    }
+
+    func testSilenceInsertedWhenGapExceedsThreshold() {
+        var c = TrackClock(sampleRate: 16000, gapThreshold: 0.1)
+        c.advance(frameCount: 16000)
+        let gap = c.silenceNeeded(atWallTime: 4.5)
+        XCTAssertNotNil(gap)
+        XCTAssertEqual(gap!, 3.5, accuracy: 1e-9)
+        XCTAssertEqual(c.writtenSeconds, 4.5, accuracy: 1e-9)
+        XCTAssertNil(c.silenceNeeded(atWallTime: 4.5), "이미 메운 공백을 또 요구하면 안 된다")
+    }
+
+    /// 버퍼가 앞서 도착하면(벽시계가 기록량보다 뒤) 무음을 넣지 않는다.
+    func testNoSilenceWhenWallTimeBehind() {
+        var c = TrackClock(sampleRate: 16000, gapThreshold: 0.1)
+        c.advance(frameCount: 16000)
+        XCTAssertNil(c.silenceNeeded(atWallTime: 0.5))
+        XCTAssertEqual(c.writtenSeconds, 1.0, accuracy: 1e-9)
+    }
+
+    func testRecordGapProducesDiscontinuityAtPreGapFileTime() {
+        var c = TrackClock(sampleRate: 16000, gapThreshold: 0.1)
+        c.advance(frameCount: 16000)
+        let gap = c.silenceNeeded(atWallTime: 4.5)!
+        let rec = c.recordGap(wallTime: 4.5, gapSeconds: gap, reason: "capture_gap")
+        XCTAssertEqual(rec.fileTime, 1.0, accuracy: 1e-9)
+        XCTAssertEqual(rec.wallTime, 4.5, accuracy: 1e-9)
+        XCTAssertEqual(rec.gapSeconds, 3.5, accuracy: 1e-9)
+        XCTAssertEqual(rec.reason, "capture_gap")
+    }
+}
