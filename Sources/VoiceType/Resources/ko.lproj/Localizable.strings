@@ -161,6 +161,8 @@
 "history.copy" = "복사";
 "history.copied" = "복사됨";
 "history.unpasted" = "미붙여넣기";
+"history.saveRecordings" = "원본 오디오 저장 (m4a, 30일 후 자동 삭제)";
+"history.playAudio" = "오디오 보기";
 
 /* Onboarding */
 "onboarding.welcome.title" = "VoiceType 에 오신 걸 환영합니다";

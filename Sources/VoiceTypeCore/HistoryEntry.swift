@@ -11,19 +11,23 @@ public struct HistoryEntry: Codable, Identifiable, Sendable {
     public let finalText: String
     /// 자동 붙여넣기를 시도했는지 (false면 클립보드에서 수동 Cmd+V 필요)
     public let autoPasted: Bool
+    /// 원본 오디오 파일명 (Recordings/ 폴더 내 상대경로, m4a). nil이면 저장 안 됐거나 구버전 기록.
+    public let audioFileName: String?
 
     public init(id: UUID = UUID(),
                 timestamp: Date,
                 profileName: String,
                 rawTranscript: String,
                 finalText: String,
-                autoPasted: Bool) {
+                autoPasted: Bool,
+                audioFileName: String? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.profileName = profileName
         self.rawTranscript = rawTranscript
         self.finalText = finalText
         self.autoPasted = autoPasted
+        self.audioFileName = audioFileName
     }
 
     /// LLM 후처리로 원문이 실제 바뀌었는지
