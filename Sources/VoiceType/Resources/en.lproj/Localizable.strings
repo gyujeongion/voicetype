@@ -161,6 +161,8 @@
 "history.copy" = "Copy";
 "history.copied" = "Copied";
 "history.unpasted" = "not pasted";
+"history.saveRecordings" = "Save original audio (m4a, auto-deleted after 30 days)";
+"history.playAudio" = "Reveal audio";
 
 /* Onboarding */
 "onboarding.welcome.title" = "Welcome to VoiceType";

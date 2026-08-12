@@ -11,6 +11,8 @@ final class DictationController {
     private var engine: STTEngine?
     /// 현재 녹음 중인 프로파일 (종료 시 이 프로파일로 후처리)
     private var activeProfile: PromptProfile?
+    /// 이번 세션의 원본 오디오(m4a) 목적지. 히스토리에 붙지 못하면 cleanup()에서 삭제.
+    private var activeRecordingURL: URL?
     /// Accessibility 권한 안내를 이미 띄웠는지 (반복 방지)
     private static var accessibilityWarned = false
     /// finish 후 STT 응답 지연 가드
@@ -96,13 +98,17 @@ final class DictationController {
         // (USB 마이크 등 외부 장치가 시스템 기본값이면 자동으로 잡힘)
         let device = AudioDevices.resolve(selectedUID: settings.selectedMicrophoneUID,
                                           priority: settings.microphonePriority)
+        let recordingURL = settings.saveRecordings ? HistoryStore.shared.newRecordingURL() : nil
+        activeRecordingURL = recordingURL
         do {
-            try capture.start(deviceID: device?.deviceID)
+            try capture.start(deviceID: device?.deviceID, recordingURL: recordingURL)
             setState(.recording)
         } catch {
             engine.cancel()
             self.engine = nil
             capture.onPCM = nil
+            if let recordingURL = recordingURL { try? FileManager.default.removeItem(at: recordingURL) }
+            activeRecordingURL = nil
             onError?("녹음 시작 실패: \(error.localizedDescription)")
             setState(.idle)
         }
@@ -131,6 +137,9 @@ final class DictationController {
         let store = SettingsStore.shared
         let profile = activeProfile
         let raw = text
+        // 소유권을 이 클로저로 넘김 — cleanup()이 뒤에 호출돼도 여기서 지운 파일을 건드리지 않음
+        let recordingURL = activeRecordingURL
+        activeRecordingURL = nil
         Task { @MainActor in
             var out = text
             var pasted = false
@@ -153,12 +162,15 @@ final class DictationController {
                     self.onError?("자동 붙여넣기엔 '손쉬운 사용(Accessibility)' 권한이 필요합니다.\n시스템 설정 > 개인정보 보호 및 보안 > 손쉬운 사용에서 VoiceType을 켠 뒤 앱을 다시 실행하세요.\n(지금은 클립보드에 복사됨 — Cmd+V로 붙여넣으세요)")
                 }
             }
-            // 히스토리 기록 (원문 + 최종본)
+            // 히스토리 기록 (원문 + 최종본 + 원본 오디오)
             if !raw.isEmpty || !out.isEmpty {
                 HistoryStore.shared.add(profileName: profile?.name ?? "받아쓰기",
                                         raw: raw,
                                         final: out,
-                                        autoPasted: pasted)
+                                        autoPasted: pasted,
+                                        audioFileName: recordingURL?.lastPathComponent)
+            } else if let recordingURL = recordingURL {
+                try? FileManager.default.removeItem(at: recordingURL)
             }
             self.cleanup()
             self.setState(.idle)
@@ -172,6 +184,11 @@ final class DictationController {
         capture.onPCM = nil
         capture.onLevel = nil
         engine = nil
+        // 히스토리에 붙지 못한 채(에러·타임아웃) 남은 녹음 파일 정리
+        if let url = activeRecordingURL {
+            try? FileManager.default.removeItem(at: url)
+            activeRecordingURL = nil
+        }
     }
 
     private func setState(_ s: State) {

@@ -14,6 +14,8 @@ final class AudioCapture {
     private var converter: AVAudioConverter?
     private let targetFormat: AVAudioFormat
     private(set) var isRunning = false
+    /// 원본 오디오 녹음 파일 (m4a/AAC). recordingURL이 주어졌을 때만 생성.
+    private var audioFile: AVAudioFile?
 
     /// 변환된 PCM(s16le) 청크 콜백 (오디오 스레드에서 호출됨)
     var onPCM: ((Data) -> Void)?
@@ -41,7 +43,8 @@ final class AudioCapture {
         }
     }
 
-    func start(deviceID: AudioDeviceID?) throws {
+    /// - Parameter recordingURL: 주어지면 16kHz mono AAC(m4a)로 원본 오디오를 동시에 파일로 기록.
+    func start(deviceID: AudioDeviceID?, recordingURL: URL? = nil) throws {
         guard !isRunning else { return }
         if let dev = deviceID {
             try setInputDevice(dev)
@@ -52,6 +55,17 @@ final class AudioCapture {
 
         converter = AVAudioConverter(from: inputFormat, to: targetFormat)
 
+        if let recordingURL = recordingURL {
+            let settings: [String: Any] = [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: targetFormat.sampleRate,
+                AVNumberOfChannelsKey: targetFormat.channelCount,
+                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            ]
+            audioFile = try? AVAudioFile(forWriting: recordingURL, settings: settings,
+                                         commonFormat: .pcmFormatInt16, interleaved: true)
+        }
+
         input.installTap(onBus: 0, bufferSize: 1600, format: inputFormat) { [weak self] buffer, _ in
             self?.process(buffer)
         }
@@ -60,6 +74,7 @@ final class AudioCapture {
             try engine.start()
         } catch {
             input.removeTap(onBus: 0)
+            audioFile = nil
             throw CaptureError.engineStart(error)
         }
         isRunning = true
@@ -70,6 +85,7 @@ final class AudioCapture {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         isRunning = false
+        audioFile = nil   // dealloc이 파일을 finalize/close
     }
 
     // MARK: - 장치 지정
@@ -111,6 +127,9 @@ final class AudioCapture {
         let byteCount = n * MemoryLayout<Int16>.size
         let data = Data(bytes: ch[0], count: byteCount)
         onPCM(data)
+        if let audioFile = audioFile {
+            try? audioFile.write(from: out)
+        }
 
         // 입력 레벨(RMS) 계산 → 레벨미터
         if let onLevel = onLevel {

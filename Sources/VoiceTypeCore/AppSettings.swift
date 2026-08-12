@@ -95,6 +95,9 @@ public struct AppSettings: Codable, Sendable {
     /// 녹음 인디케이터 디자인
     public var indicatorStyle: IndicatorStyle
 
+    /// 받아쓰기 원본 오디오(m4a)를 Recordings/ 폴더에 함께 저장할지
+    public var saveRecordings: Bool
+
     public init(profiles: [PromptProfile]? = nil,
                 microphonePriority: [String] = [],
                 selectedMicrophoneUID: String? = nil,
@@ -109,7 +112,8 @@ public struct AppSettings: Codable, Sendable {
                 spaceBarThreshold: Int = 3,
                 spaceBarProfileID: UUID? = nil,
                 spaceBarExcludedAppBundleIDs: [String] = [],
-                indicatorStyle: IndicatorStyle = .waveform) {
+                indicatorStyle: IndicatorStyle = .waveform,
+                saveRecordings: Bool = true) {
         self.profiles = profiles ?? AppSettings.defaultProfiles
         self.microphonePriority = microphonePriority
         self.selectedMicrophoneUID = selectedMicrophoneUID
@@ -125,13 +129,14 @@ public struct AppSettings: Codable, Sendable {
         self.spaceBarProfileID = spaceBarProfileID
         self.spaceBarExcludedAppBundleIDs = spaceBarExcludedAppBundleIDs
         self.indicatorStyle = indicatorStyle
+        self.saveRecordings = saveRecordings
     }
 
     enum CodingKeys: String, CodingKey {
         case profiles, microphonePriority, selectedMicrophoneUID, languageHints, dictionary, llm, stt
         case autoPaste, copyToClipboard, appLanguage
         case spaceBarTrigger, spaceBarThreshold, spaceBarProfileID, spaceBarExcludedAppBundleIDs
-        case indicatorStyle
+        case indicatorStyle, saveRecordings
     }
 
     // 관대한 디코딩 — 향후 필드 추가/변경에도 기존 설정(특히 프로파일)을 최대한 보존
@@ -152,6 +157,7 @@ public struct AppSettings: Codable, Sendable {
         spaceBarProfileID = try? c.decodeIfPresent(UUID.self, forKey: .spaceBarProfileID)
         spaceBarExcludedAppBundleIDs = (try? c.decode([String].self, forKey: .spaceBarExcludedAppBundleIDs)) ?? []
         indicatorStyle = (try? c.decode(IndicatorStyle.self, forKey: .indicatorStyle)) ?? .waveform
+        saveRecordings = (try? c.decode(Bool.self, forKey: .saveRecordings)) ?? true
     }
 
     /// Default profiles: Option+Space for dictation, Option+Shift+Space for English translation.
