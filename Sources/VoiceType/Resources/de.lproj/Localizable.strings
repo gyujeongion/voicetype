@@ -27,6 +27,11 @@
 "output.accessibility" = "Bedienungshilfen-Berechtigung (für automatisches Einfügen erforderlich)";
 "output.accessibility.open" = "Bedienungshilfen-Einstellungen öffnen";
 "output.accessibility.note" = "Starten Sie VoiceType nach der Genehmigung neu, um das automatische Einfügen zu aktivieren.";
+"launch.section" = "App-Start";
+"launch.toggle" = "VoiceType beim Anmelden starten";
+"launch.note" = "VoiceType startet beim Anmelden automatisch in der Menüleiste.";
+"launch.requiresApproval" = "Erlauben Sie VoiceType unter den Anmeldeobjekten in den Systemeinstellungen.";
+"launch.error" = "Die Einstellung für den Start bei der Anmeldung konnte nicht geändert werden.";
 
 "language.section" = "Sprache";
 "language.picker" = "App-Sprache";

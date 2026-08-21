@@ -87,6 +87,11 @@
 "output.accessibility" = "손쉬운 사용 권한 (자동 붙여넣기에 필수)";
 "output.accessibility.open" = "권한 설정 열기";
 "output.accessibility.note" = "권한 부여 후 VoiceType을 한 번 재실행하면 자동 붙여넣기가 동작합니다.";
+"launch.section" = "앱 실행";
+"launch.toggle" = "로그인 시 VoiceType 실행";
+"launch.note" = "Mac에 로그인하면 VoiceType이 메뉴바에서 자동으로 시작됩니다.";
+"launch.requiresApproval" = "시스템 설정의 로그인 항목에서 VoiceType 실행을 허용해야 합니다.";
+"launch.error" = "로그인 실행 설정을 변경하지 못했습니다.";
 
 /* General — Space bar trigger section */
 "output.space.section" = "Space 꾹누르기 음성 입력";

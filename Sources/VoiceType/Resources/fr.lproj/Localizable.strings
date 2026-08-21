@@ -27,6 +27,11 @@
 "output.accessibility" = "Permission d'accessibilité (requise pour le collage automatique)";
 "output.accessibility.open" = "Ouvrir les réglages d'accessibilité";
 "output.accessibility.note" = "Relancez VoiceType après avoir accordé la permission pour activer le collage automatique.";
+"launch.section" = "Lancement de l’app";
+"launch.toggle" = "Lancer VoiceType à la connexion";
+"launch.note" = "VoiceType démarrera automatiquement dans la barre des menus à la connexion au Mac.";
+"launch.requiresApproval" = "Autorisez VoiceType dans les éléments d’ouverture dans Réglages Système.";
+"launch.error" = "Impossible de modifier le réglage de lancement à la connexion.";
 
 "language.section" = "Langue";
 "language.picker" = "Langue de l'app";

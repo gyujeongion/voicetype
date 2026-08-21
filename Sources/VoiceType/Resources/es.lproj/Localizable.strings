@@ -27,6 +27,11 @@
 "output.accessibility" = "Permiso de accesibilidad (requerido para pegar automáticamente)";
 "output.accessibility.open" = "Abrir configuración de accesibilidad";
 "output.accessibility.note" = "Reinicia VoiceType después de conceder el permiso para activar el pegado automático.";
+"launch.section" = "Inicio de la app";
+"launch.toggle" = "Abrir VoiceType al iniciar sesión";
+"launch.note" = "VoiceType se iniciará automáticamente en la barra de menús al iniciar sesión en el Mac.";
+"launch.requiresApproval" = "Permite VoiceType en Elementos de inicio de sesión en Ajustes del Sistema.";
+"launch.error" = "No se pudo cambiar la opción de inicio de sesión.";
 
 "language.section" = "Idioma";
 "language.picker" = "Idioma de la app";
