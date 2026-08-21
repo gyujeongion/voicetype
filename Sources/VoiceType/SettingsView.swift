@@ -6,6 +6,7 @@ import VoiceTypeCore
 struct SettingsView: View {
     @ObservedObject var vm: SettingsViewModel
     @ObservedObject var history = HistoryStore.shared
+    @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
     @EnvironmentObject var localization: LocalizationManager
     @StateObject private var micTester = MicTester()
     @State private var draggedMicUID: String?
@@ -333,6 +334,23 @@ struct SettingsView: View {
                     .font(.caption2).foregroundStyle(.secondary)
             }
 
+            Section(t("launch.section")) {
+                Toggle(t("launch.toggle"), isOn: Binding(
+                    get: { launchAtLogin.isEnabled },
+                    set: { launchAtLogin.setEnabled($0) }
+                ))
+                Text(t("launch.note"))
+                    .font(.caption).foregroundStyle(.secondary)
+                if launchAtLogin.status == .requiresApproval {
+                    Text(t("launch.requiresApproval"))
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                if let errorMessage = launchAtLogin.errorMessage {
+                    Text("\(t("launch.error"))\n\(errorMessage)")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+            }
+
             Section(t("indicator.section")) {
                 Picker(t("indicator.style"), selection: $vm.settings.indicatorStyle) {
                     ForEach(IndicatorStyle.allCases, id: \.self) { style in
@@ -467,6 +485,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear { launchAtLogin.refresh() }
     }
 
     @State private var diagCopied = false

@@ -193,6 +193,15 @@ final class LLMPresetTests: XCTestCase {
     }
 }
 
+final class LaunchAtLoginStateTests: XCTestCase {
+    func testOnlyEnabledStatusIsReportedAsEnabled() {
+        XCTAssertTrue(LaunchAtLoginStatus.enabled.isEnabled)
+        XCTAssertFalse(LaunchAtLoginStatus.notRegistered.isEnabled)
+        XCTAssertFalse(LaunchAtLoginStatus.requiresApproval.isEnabled)
+        XCTAssertFalse(LaunchAtLoginStatus.unknown.isEnabled)
+    }
+}
+
 final class AppSettingsTests: XCTestCase {
     func testDefaultProfilesSeed() {
         let s = AppSettings.default

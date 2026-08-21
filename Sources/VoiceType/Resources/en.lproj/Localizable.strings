@@ -87,6 +87,11 @@
 "output.accessibility" = "Accessibility permission (required for auto-paste)";
 "output.accessibility.open" = "Open accessibility settings";
 "output.accessibility.note" = "Relaunch VoiceType once after granting permission for auto-paste to activate.";
+"launch.section" = "App launch";
+"launch.toggle" = "Launch VoiceType at login";
+"launch.note" = "VoiceType starts automatically in the menu bar when you log in to your Mac.";
+"launch.requiresApproval" = "Allow VoiceType in Login Items in System Settings.";
+"launch.error" = "Could not change the login launch setting.";
 
 /* General — Space bar trigger section */
 "output.space.section" = "Space Bar Voice Trigger";

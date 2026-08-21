@@ -27,6 +27,11 @@
 "output.accessibility" = "アクセシビリティ権限（自動ペーストに必要）";
 "output.accessibility.open" = "アクセシビリティ設定を開く";
 "output.accessibility.note" = "権限を付与した後、VoiceTypeを再起動すると自動ペーストが有効になります。";
+"launch.section" = "アプリの起動";
+"launch.toggle" = "ログイン時にVoiceTypeを起動";
+"launch.note" = "Macにログインすると、VoiceTypeがメニューバーで自動的に起動します。";
+"launch.requiresApproval" = "システム設定のログイン項目でVoiceTypeを許可してください。";
+"launch.error" = "ログイン時の起動設定を変更できませんでした。";
 
 "language.section" = "言語";
 "language.picker" = "アプリの言語";

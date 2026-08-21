@@ -27,6 +27,11 @@
 "output.accessibility" = "辅助功能权限（自动粘贴所需）";
 "output.accessibility.open" = "打开辅助功能设置";
 "output.accessibility.note" = "授权后重启VoiceType即可激活自动粘贴。";
+"launch.section" = "应用启动";
+"launch.toggle" = "登录时启动 VoiceType";
+"launch.note" = "登录 Mac 后，VoiceType 会在菜单栏中自动启动。";
+"launch.requiresApproval" = "请在系统设置的登录项中允许 VoiceType。";
+"launch.error" = "无法更改登录启动设置。";
 
 "language.section" = "语言";
 "language.picker" = "应用语言";
