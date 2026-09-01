@@ -325,8 +325,7 @@ final class RecordingSessionTests: XCTestCase {
                 TrackInfo(kind: .system, fileName: "system.m4a", durationSeconds: 4330.9,
                           discontinuities: [DiscontinuityRecord(fileTime: 1200.0, wallTime: 1203.5,
                                                                 gapSeconds: 3.5, reason: "capture_gap")]),
-            ],
-            transcriptionStatus: .pending)
+            ])
     }
 
     func testRoundTripEncodeDecode() throws {
@@ -356,16 +355,15 @@ final class RecordingSessionTests: XCTestCase {
         XCTAssertEqual(s.durationSeconds, 0)
         XCTAssertEqual(s.captureStatus, .failed)
         XCTAssertTrue(s.tracks.isEmpty)
-        XCTAssertEqual(s.transcriptionStatus, .pending)
     }
 
     /// 알 수 없는 status 문자열은 안전한 기본값으로 떨어져야 한다.
+    /// (구버전 manifest에 남아있을 수 있는 transcriptionStatus 등 알 수 없는 키는 무시되어야 한다.)
     func testUnknownStatusFallsBack() throws {
         let json = #"{"id":"x","startedAt":0,"captureStatus":"weird","transcriptionStatus":"weird"}"#
             .data(using: .utf8)!
         let s = try JSONDecoder().decode(RecordingSession.self, from: json)
         XCTAssertEqual(s.captureStatus, .failed)
-        XCTAssertEqual(s.transcriptionStatus, .pending)
     }
 
     func testNeedsRecoveryWhenCaptureNotDone() {

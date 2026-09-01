@@ -168,6 +168,15 @@
 "history.unpasted" = "미붙여넣기";
 "history.saveRecordings" = "원본 오디오 저장 (m4a, 30일 후 자동 삭제)";
 "history.playAudio" = "오디오 보기";
+"history.f5.title" = "F5 녹음";
+"history.f5.empty" = "아직 F5 녹음이 없습니다.";
+"history.f5.mixed" = "마이크+시스템";
+"history.f5.mic.only" = "마이크만";
+"history.f5.failed" = "캡처 실패";
+"history.f5.reveal" = "Finder에서 보기";
+"history.f5.copyPath" = "경로 복사";
+"history.f5.note" = "녹음 전용입니다 — 전사는 자동으로 안 됩니다. 파일을 STT(예: /stt, /sttl)로 넘기세요.";
+"recorder.finished.notify" = "녹음이 저장됐습니다. 설정 > 히스토리에서 확인하세요.";
 
 /* Onboarding */
 "onboarding.welcome.title" = "VoiceType 에 오신 걸 환영합니다";
@@ -205,4 +214,5 @@
 "recorder.indicator.recording" = "녹음 중";
 "recorder.indicator.finalizing" = "저장 중";
 "recorder.dictation_blocked" = "녹음 중에는 받아쓰기를 사용할 수 없습니다. F5로 녹음을 먼저 종료하세요.";
+"recorder.blocked_by_dictation" = "받아쓰기 처리 중에는 F5 녹음을 시작할 수 없습니다.";
 "recorder.recovered" = "정상 종료되지 않은 녹음 %d건을 복구했습니다.";

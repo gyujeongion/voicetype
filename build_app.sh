@@ -18,6 +18,11 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Framewor
 cp "$BIN" "$APP/Contents/MacOS/VoiceType"
 cp Info.plist "$APP/Contents/Info.plist"
 
+# macOS Finder/Dock용 앱 아이콘
+ICON_FILE="Resources/VoiceType.icns"
+[ -f "$ICON_FILE" ] || { echo "앱 아이콘 없음: $ICON_FILE"; exit 1; }
+cp "$ICON_FILE" "$APP/Contents/Resources/VoiceType.icns"
+
 # SwiftPM 리소스 번들의 현지화 파일을 앱 메인 번들로 복사한다.
 # String(localized:)는 기본적으로 Bundle.main을 조회하므로 이 단계가 빠지면
 # 화면에 "mic.section" 같은 키가 그대로 노출된다.
@@ -39,7 +44,11 @@ if [ -n "$FW" ]; then
 fi
 
 echo "▶ 코드사인 (Developer ID — 재빌드 시 서명 일관 → Keychain 재인증 안 뜸)…"
-SIGN_ID="Developer ID Application: Gyujeong Park (XAJGN9YVP2)"
+# 2026-08-16: 구 인증서가 유출돼 새 Developer ID로 교체했다. 두 인증서의 CN이
+# 동일해서 이름으로 지정하면 어느 쪽이 선택될지 보장되지 않는다. SHA-1 지문으로
+# 고정한다. 인증서를 다시 갱신하면 이 값을 바꿔야 한다.
+#   확인: security find-identity -v -p codesigning
+SIGN_ID="B248066CD15BA72391CFF02EBBB5E5866C685715"   # Developer ID Application: Gyujeong Park (XAJGN9YVP2), 2031/08/17 만료
 if security find-identity -p codesigning -v 2>/dev/null | grep -q "$SIGN_ID"; then
     SIGN="$SIGN_ID"
 else

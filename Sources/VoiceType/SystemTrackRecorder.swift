@@ -26,6 +26,11 @@ final class SystemTrackRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @un
     /// 스트림이 중간에 죽었을 때. 마이크 녹음은 계속된다.
     var onFailure: ((String) -> Void)?
 
+    /// 세션 시작(마이크 시작) 대비 이 트랙이 실제로 녹음을 시작한 지연(초).
+    /// 권한 확인·SCStream 기동에 수백ms~수 초가 걸려 마이크보다 항상 늦게 시작한다.
+    /// 병합 시 이 값만큼 무음을 앞에 채워야 두 트랙이 맞는다.
+    private(set) var startOffsetSeconds: Double = 0
+
     override init() {
         targetFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
                                      sampleRate: 16000,
@@ -44,7 +49,7 @@ final class SystemTrackRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @un
         }
     }
 
-    func start(to url: URL) async throws {
+    func start(to url: URL, sessionStartedAt: Date) async throws {
         // 오디오만 필요하지만 SCStream은 유효한 SCContentFilter를 요구한다.
         let content = try await SCShareableContent.excludingDesktopWindows(false,
                                                                            onScreenWindowsOnly: true)
@@ -75,6 +80,7 @@ final class SystemTrackRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @un
         try await s.startCapture()
         stream = s
         startHostTime = mach_absolute_time()
+        startOffsetSeconds = max(0, Date().timeIntervalSince(sessionStartedAt))
     }
 
     func stop() async -> (durationSeconds: Double, discontinuities: [DiscontinuityRecord], dropped: Int) {

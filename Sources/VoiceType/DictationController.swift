@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import VoiceTypeCore
 
@@ -7,16 +8,24 @@ final class DictationController {
     enum State { case idle, starting, recording, finishing }
 
     private(set) var state: State = .idle
+    /// F5 녹음과의 마이크 점유 충돌을 막기 위해 외부(AppDelegate)에서 확인하는 값.
+    var isActive: Bool { state != .idle }
     private let capture = AudioCapture()
     private var engine: STTEngine?
     /// 현재 녹음 중인 프로파일 (종료 시 이 프로파일로 후처리)
     private var activeProfile: PromptProfile?
     /// 이번 세션의 원본 오디오(m4a) 목적지. 히스토리에 붙지 못하면 cleanup()에서 삭제.
     private var activeRecordingURL: URL?
+    /// 녹음을 시작할 때 맨 앞에 있던 앱. 결과를 다시 그 앱에만 자동 주입하기 위해 기억해둔다 —
+    /// 처리 중 사용자가 다른 앱으로 옮겨가면 엉뚱한 곳에 붙여넣기되는 사고를 막는다.
+    private var startedInAppBundleID: String?
     /// Accessibility 권한 안내를 이미 띄웠는지 (반복 방지)
     private static var accessibilityWarned = false
     /// finish 후 STT 응답 지연 가드
     private var finishTimeout: Task<Void, Never>?
+    /// 이번 세션의 식별자. 취소·타임아웃 이후 늦게 도착하는 옛 엔진의 콜백(지연·중복 응답)을
+    /// 걸러내는 데 쓴다 — 없으면 옛 세션의 텍스트가 새 세션의 프로파일/녹음파일에 잘못 붙는다.
+    private var sessionToken: UUID?
 
     var onStateChange: ((State) -> Void)?
     var onInterim: ((String) -> Void)?
@@ -54,6 +63,8 @@ final class DictationController {
             return
         }
         activeProfile = profile
+        // 결과를 붙여넣을 대상 = 지금 맨 앞에 있는 앱. 이후 바뀌면 자동주입을 건너뛴다.
+        startedInAppBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         AudioCapture.requestPermission { [weak self] ok in
             MainActor.assumeIsolated {
                 guard let self = self else { return }
@@ -70,18 +81,22 @@ final class DictationController {
     private func beginRecording(apiKey: String, settings: AppSettings) {
         let engine = STTEngineFactory.make(settings.stt)
         self.engine = engine
+        let token = UUID()
+        sessionToken = token
 
         engine.onUpdate = { [weak self] f, i in
-            self?.onInterim?(f + i)
+            guard let self, self.sessionToken == token else { return }
+            self.onInterim?(f + i)
         }
         engine.onError = { [weak self] err in
-            guard let self = self else { return }
+            guard let self = self, self.sessionToken == token else { return }
             self.cleanup()
             self.setState(.idle)
             self.onError?(KeyTester.networkMessage(err))
         }
         engine.onFinished = { [weak self] text in
-            self?.handleFinal(text: text, settings: settings)
+            guard let self, self.sessionToken == token else { return }
+            self.handleFinal(text: text, settings: settings)
         }
 
         let customEndpoint = settings.stt.provider == .custom ? settings.stt.customEndpoint : nil
@@ -140,6 +155,7 @@ final class DictationController {
         // 소유권을 이 클로저로 넘김 — cleanup()이 뒤에 호출돼도 여기서 지운 파일을 건드리지 않음
         let recordingURL = activeRecordingURL
         activeRecordingURL = nil
+        let expectedApp = startedInAppBundleID
         Task { @MainActor in
             var out = text
             var pasted = false
@@ -154,7 +170,13 @@ final class DictationController {
             // 단어사전은 STT context.terms 로 인식 단계에서 이미 교정됨 (별도 후처리 불필요)
             if !out.isEmpty {
                 // 결과는 항상 클립보드에 복사됨 (놓쳐도 Cmd+V 가능)
-                pasted = TextInjector.injectText(out, autoPaste: settings.autoPaste)
+                pasted = TextInjector.injectText(out, autoPaste: settings.autoPaste,
+                                                 expectedAppBundleID: expectedApp,
+                                                 onSkippedDueToAppSwitch: { [weak self] in
+                    Task { @MainActor in
+                        self?.onError?("결과를 처리하는 동안 다른 앱으로 전환돼 자동 붙여넣기를 건너뛰었습니다. 클립보드에 복사돼 있습니다 — Cmd+V로 붙여넣으세요.")
+                    }
+                })
                 // autoPaste인데 권한이 없어 못 붙인 경우 1회 안내 + 시스템 설정 유도
                 if settings.autoPaste && !pasted && !TextInjector.hasAccessibility() && !Self.accessibilityWarned {
                     Self.accessibilityWarned = true
@@ -180,6 +202,8 @@ final class DictationController {
     private func cleanup() {
         finishTimeout?.cancel()
         finishTimeout = nil
+        sessionToken = nil
+        startedInAppBundleID = nil
         capture.stop()
         capture.onPCM = nil
         capture.onLevel = nil
