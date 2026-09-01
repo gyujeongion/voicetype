@@ -177,8 +177,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.indicator.setShowsSecondaryLevel(true)
             self?.indicator.setSecondaryLevel(level)
         }
-        recorder.onFinished = { folder in
-            NSWorkspace.shared.activateFileViewerSelecting([folder])
+        recorder.onFinished = { [weak self] _ in
+            // Finder 자동 팝업 폐기(2026-08-17) — 설정 > 히스토리 탭에서 목록으로 확인,
+            // 필요할 때만 버튼으로 Finder 연결. RecordingStore가 이미 갱신을 발행한다.
+            self?.notify(self?.l.text("recorder.finished.notify") ?? "녹음이 저장됐습니다.")
         }
     }
 
@@ -248,6 +250,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkey.onTrigger = { [weak self] id in
             guard let self = self else { return }
             if id == Self.recordingHotkeyID {
+                // 받아쓰기가 마이크를 점유/처리 중일 때 F5 녹음을 새로 시작하면 자원이 충돌한다.
+                // (반대 방향 — 녹음 중 받아쓰기 차단 — 은 바로 아래에서 처리)
+                if !self.recorder.isRecording && self.dictation.isActive {
+                    self.notify(self.l.text("recorder.blocked_by_dictation"))
+                    return
+                }
                 self.recorder.toggle()
                 return
             }
@@ -329,6 +337,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleRecording() {
         // 메뉴에서 토글 → 첫 프로파일 사용 (녹음 중이면 프로파일 무관하게 종료)
+        guard !recorder.isRecording else {
+            notify(l.text("recorder.dictation_blocked"))
+            return
+        }
         guard let first = SettingsStore.shared.settings.profiles.first else { return }
         dictation.trigger(profile: first)
     }

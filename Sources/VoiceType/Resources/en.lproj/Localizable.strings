@@ -168,6 +168,15 @@
 "history.unpasted" = "not pasted";
 "history.saveRecordings" = "Save original audio (m4a, auto-deleted after 30 days)";
 "history.playAudio" = "Reveal audio";
+"history.f5.title" = "F5 Recordings";
+"history.f5.empty" = "No F5 recordings yet.";
+"history.f5.mixed" = "Mic + System";
+"history.f5.mic.only" = "Mic only";
+"history.f5.failed" = "Capture failed";
+"history.f5.reveal" = "Show in Finder";
+"history.f5.copyPath" = "Copy Path";
+"history.f5.note" = "Recording only — transcription is not automatic. Feed the file to an STT tool if you need one.";
+"recorder.finished.notify" = "Recording saved. Check Settings > History.";
 
 /* Onboarding */
 "onboarding.welcome.title" = "Welcome to VoiceType";
@@ -205,4 +214,5 @@
 "recorder.indicator.recording" = "Recording";
 "recorder.indicator.finalizing" = "Saving";
 "recorder.dictation_blocked" = "Dictation is unavailable while recording. Press F5 to stop the recording first.";
+"recorder.blocked_by_dictation" = "Can't start F5 recording while dictation is being processed.";
 "recorder.recovered" = "Recovered %d recording(s) that did not finish normally.";

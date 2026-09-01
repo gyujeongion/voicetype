@@ -24,9 +24,17 @@ enum TextInjector {
 
     /// 결과는 **항상 클립보드에 복사**한다 (붙여넣기를 놓쳐도 Cmd+V로 수동 가능).
     /// autoPaste면 추가로 Cmd+V를 합성한 뒤, 기존 클립보드를 복원한다.
-    /// 반환: 자동 붙여넣기를 실제로 시도했는지 (false면 권한 없음 → 클립보드만).
+    ///
+    /// `expectedAppBundleID`가 주어지면, 실제로 키 입력을 보내기 직전에 맨 앞 앱이
+    /// 그 앱과 같은지 다시 확인한다 — 처리(LLM 후처리 등)가 걸리는 동안 사용자가 다른
+    /// 앱으로 옮겨갔다면 그 앱에 엉뚱하게 붙여넣기하지 않고 건너뛴다(텍스트는 클립보드에 남김).
+    ///
+    /// 반환: 자동 붙여넣기를 실제로 "시도"했는지 (false면 권한 없음 → 클립보드만).
+    /// 앱 전환으로 건너뛴 경우는 `onSkippedDueToAppSwitch`로 비동기 통지한다.
     @discardableResult
-    static func injectText(_ text: String, autoPaste: Bool) -> Bool {
+    static func injectText(_ text: String, autoPaste: Bool,
+                           expectedAppBundleID: String? = nil,
+                           onSkippedDueToAppSwitch: (@Sendable () -> Void)? = nil) -> Bool {
         let pb = NSPasteboard.general
 
         if autoPaste && hasAccessibility() {
@@ -34,6 +42,13 @@ enum TextInjector {
             let snapshot = ClipboardSnapshot(pasteboard: pb)
             copyToClipboard(text)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                if let expectedAppBundleID,
+                   NSWorkspace.shared.frontmostApplication?.bundleIdentifier != expectedAppBundleID {
+                    // 다른 앱으로 전환됨 — 붙여넣기 건너뜀. 클립보드의 결과 텍스트는 그대로 둔다
+                    // (기존 클립보드로 복원하면 방금 만든 결과를 사용자가 잃어버린다).
+                    onSkippedDueToAppSwitch?()
+                    return
+                }
                 paste()
                 // Restore previous clipboard once the target app has consumed Cmd+V
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {

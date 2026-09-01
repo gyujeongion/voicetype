@@ -2,10 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDisplayName</key>
-	<string>VoiceType</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>ko</string>
+	<key>CFBundleDisplayName</key>
+	<string>VoiceType</string>
+	<key>CFBundleIconFile</key>
+	<string>VoiceType.icns</string>
 	<key>CFBundleExecutable</key>
 	<string>VoiceType</string>
 	<key>CFBundleIdentifier</key>
@@ -15,9 +17,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>1.0.0</string>
+	<string>1.1.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>
@@ -33,7 +35,7 @@
 	<key>SUFeedURL</key>
 	<string>https://github.com/gyujeongion/voicetype/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>8g8oRcK3OnJDNFMTNVKoEvO5YSX/WH0i3wDBmbEYYcA=</string>
+	<string>nWewvPxMkELVsrcZBdCsW7tuAAznx+Om5wkqUd2jppQ=</string>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
 </dict>

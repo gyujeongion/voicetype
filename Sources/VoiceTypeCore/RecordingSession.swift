@@ -4,6 +4,8 @@ import Foundation
 public enum TrackKind: String, Codable, Sendable, CaseIterable {
     case mic
     case system
+    /// 마이크+시스템을 한 파일로 합친 트랙. 시스템 오디오가 잡힌 회차의 기본 산출물.
+    case mixed
 }
 
 /// 캡처 중 발생한 시간 불연속 1건. 슬립·드롭아웃으로 생긴 공백을 진단하려고 남긴다.
@@ -63,48 +65,31 @@ public enum CaptureStatus: String, Codable, Sendable {
     case failed
 }
 
-/// 전사 진행 상태.
-public enum TranscriptionStatus: String, Codable, Sendable {
-    case pending
-    case running
-    case done
-    case failed
-    /// 트랙이 비었거나 사용자가 원치 않아 건너뛴 경우
-    case skipped
-}
-
 /// 녹음 회차 1건의 메타데이터. 회차 폴더의 session.json에 저장된다.
+///
+/// F5는 녹음 전용 기능이다 — 앱 내부에 전사 파이프라인을 두지 않는다.
+/// 전사가 필요하면 녹음 파일을 꺼내 별도 STT(Deepgram/로컬 Whisper 등)로 넘긴다.
 public struct RecordingSession: Codable, Sendable, Equatable {
     public let id: String
     public let startedAt: Date
     public var durationSeconds: Double
     public var captureStatus: CaptureStatus
     public var tracks: [TrackInfo]
-    public var transcriptionStatus: TranscriptionStatus
-    public var transcriptionEngine: String?
-    public var transcriptionError: String?
 
     public init(id: String,
                 startedAt: Date,
                 durationSeconds: Double = 0,
                 captureStatus: CaptureStatus = .recording,
-                tracks: [TrackInfo] = [],
-                transcriptionStatus: TranscriptionStatus = .pending,
-                transcriptionEngine: String? = nil,
-                transcriptionError: String? = nil) {
+                tracks: [TrackInfo] = []) {
         self.id = id
         self.startedAt = startedAt
         self.durationSeconds = durationSeconds
         self.captureStatus = captureStatus
         self.tracks = tracks
-        self.transcriptionStatus = transcriptionStatus
-        self.transcriptionEngine = transcriptionEngine
-        self.transcriptionError = transcriptionError
     }
 
     enum CodingKeys: String, CodingKey {
         case id, startedAt, durationSeconds, captureStatus, tracks
-        case transcriptionStatus, transcriptionEngine, transcriptionError
     }
 
     /// 관대한 디코딩 — 필드가 빠지거나 알 수 없는 status 문자열이어도 안전한 기본값으로 읽는다.
@@ -117,9 +102,6 @@ public struct RecordingSession: Codable, Sendable, Equatable {
         // 상태를 못 읽으면 .failed — 완료로 오인해 복구 대상에서 빠지는 쪽이 더 나쁘다
         captureStatus = (try? c.decode(CaptureStatus.self, forKey: .captureStatus)) ?? .failed
         tracks = (try? c.decode([TrackInfo].self, forKey: .tracks)) ?? []
-        transcriptionStatus = (try? c.decode(TranscriptionStatus.self, forKey: .transcriptionStatus)) ?? .pending
-        transcriptionEngine = try? c.decode(String.self, forKey: .transcriptionEngine)
-        transcriptionError = try? c.decode(String.self, forKey: .transcriptionError)
     }
 
     /// 종류로 트랙을 찾는다. 시스템 트랙은 없을 수 있다(마이크만 녹음한 경우).

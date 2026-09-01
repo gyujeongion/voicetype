@@ -7,18 +7,60 @@ import VoiceTypeCore
 /// 히스토리는 300건 cap과 30일 만료로 자동 삭제되므로 녹음이 휩쓸려 날아갈 수 있다.
 /// 녹음 파일에는 어떤 자동 삭제도 적용하지 않는다.
 @MainActor
-final class RecordingStore {
+final class RecordingStore: ObservableObject {
     static let shared = RecordingStore()
 
     static let manifestName = "session.json"
 
+    /// History 탭 표시용 — 회차 1건.
+    struct Entry: Identifiable, Equatable {
+        let session: RecordingSession
+        let folder: URL
+        var id: String { session.id }
+
+        /// 전사·재생에 쓸 대표 오디오 파일. mixed(마이크+시스템) > system > mic 순으로 고른다.
+        var primaryAudioURL: URL? {
+            let track = session.track(.mixed) ?? session.track(.system) ?? session.track(.mic)
+            guard let fileName = track?.fileName, !fileName.isEmpty else { return nil }
+            return folder.appendingPathComponent(fileName)
+        }
+    }
+
     /// 회차 폴더들이 놓이는 루트. 설정에서 변경 가능.
-    var rootURL: URL
+    var rootURL: URL {
+        didSet { refresh() }
+    }
+
+    /// GUI(History 탭)가 구독하는 전체 회차 목록. 최신순.
+    @Published private(set) var entries: [Entry] = []
 
     private let fm = FileManager.default
 
     init(rootURL: URL? = nil) {
         self.rootURL = rootURL ?? Self.defaultRoot
+        refresh()
+    }
+
+    /// 디스크를 다시 스캔해 `entries`를 갱신한다. 녹음 종료 직후·루트 변경 시 호출.
+    func refresh() {
+        guard let items = try? fm.contentsOfDirectory(at: rootURL,
+                                                       includingPropertiesForKeys: [.isDirectoryKey],
+                                                       options: [.skipsHiddenFiles]) else {
+            entries = []
+            return
+        }
+        entries = items.compactMap { folder -> Entry? in
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: folder.path, isDirectory: &isDir), isDir.boolValue,
+                  let session = try? load(from: folder) else { return nil }
+            return Entry(session: session, folder: folder)
+        }.sorted { $0.session.startedAt > $1.session.startedAt }
+    }
+
+    /// 회차 폴더 전체를 삭제한다.
+    func delete(_ entry: Entry) {
+        try? fm.removeItem(at: entry.folder)
+        refresh()
     }
 
     static var defaultRoot: URL {

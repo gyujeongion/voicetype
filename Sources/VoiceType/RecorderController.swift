@@ -144,7 +144,7 @@ final class RecorderController {
             MainActor.assumeIsolated { self?.onError?(msg) }
         }
         do {
-            try await rec.start(to: folder.appendingPathComponent("system.caf"))
+            try await rec.start(to: folder.appendingPathComponent("system.caf"), sessionStartedAt: startedAt ?? Date())
             // await 사이에 녹음이 끝났을 수 있다
             if state == .recording {
                 system = rec
@@ -179,38 +179,71 @@ final class RecorderController {
         diskTimer?.invalidate(); diskTimer = nil
         power.release()
 
+        let sysOffset = system?.startOffsetSeconds ?? 0
         let micResult = mic.stop()
         let sysResult = await system?.stop()
         system = nil
 
         setState(.finalizing)
 
-        // CAF → m4a 변환. 실패해도 원본 CAF를 절대 먼저 지우지 않는다.
-        var tracks: [TrackInfo] = []
-        if let info = await finalizeTrack(.mic, in: folder,
-                                          duration: micResult.durationSeconds,
-                                          discontinuities: micResult.discontinuities) {
-            tracks.append(info)
-        }
-        if let sys = sysResult, sys.durationSeconds > 0,
-           let info = await finalizeTrack(.system, in: folder,
-                                          duration: sys.durationSeconds,
-                                          discontinuities: sys.discontinuities) {
-            tracks.append(info)
-        }
+        let tracks = await finalizeTracks(in: folder, micResult: micResult,
+                                          sysResult: sysResult, sysOffset: sysOffset)
 
         session.tracks = tracks
         session.durationSeconds = micResult.durationSeconds
         session.captureStatus = tracks.isEmpty ? .failed : .done
-        // 전사는 다음 단계의 범위 — 여기서는 대기 상태로 남긴다
-        session.transcriptionStatus = .pending
         try? store.save(session, in: folder)
+        store.refresh()
 
         self.session = nil
         self.folder = nil
         self.startedAt = nil
         setState(.idle)
         onFinished?(folder)
+    }
+
+    /// 두 트랙을 마무리한다. 시스템 오디오가 있으면 한 파일로 합치고, 없으면 마이크만 남긴다.
+    /// 합치기가 실패하면(형식 문제 등) 개별 파일로라도 반드시 보존한다 — 녹음을 잃으면 안 된다.
+    private func finalizeTracks(in folder: URL,
+                                micResult: (durationSeconds: Double, discontinuities: [DiscontinuityRecord], dropped: Int),
+                                sysResult: (durationSeconds: Double, discontinuities: [DiscontinuityRecord], dropped: Int)?,
+                                sysOffset: Double) async -> [TrackInfo] {
+        let micCAF = folder.appendingPathComponent("mic.caf")
+        let sysCAF = folder.appendingPathComponent("system.caf")
+        let hasSystemAudio = (sysResult?.durationSeconds ?? 0) > 0
+            && FileManager.default.fileExists(atPath: sysCAF.path)
+
+        guard hasSystemAudio, let sysResult = sysResult else {
+            guard let info = await finalizeTrack(.mic, in: folder,
+                                                 duration: micResult.durationSeconds,
+                                                 discontinuities: micResult.discontinuities) else { return [] }
+            return [info]
+        }
+
+        let mixed = folder.appendingPathComponent("recording.m4a")
+        do {
+            try await AudioMixer.mixDown(micURL: micCAF, systemURL: sysCAF,
+                                         systemOffsetSeconds: sysOffset, to: mixed)
+            try? FileManager.default.removeItem(at: micCAF)
+            try? FileManager.default.removeItem(at: sysCAF)
+            return [TrackInfo(kind: .mixed, fileName: "recording.m4a",
+                              durationSeconds: micResult.durationSeconds,
+                              discontinuities: micResult.discontinuities + sysResult.discontinuities)]
+        } catch {
+            onError?("마이크+시스템 오디오 병합에 실패해 개별 파일로 보관합니다.\n\(error.localizedDescription)")
+            var tracks: [TrackInfo] = []
+            if let info = await finalizeTrack(.mic, in: folder,
+                                              duration: micResult.durationSeconds,
+                                              discontinuities: micResult.discontinuities) {
+                tracks.append(info)
+            }
+            if let info = await finalizeTrack(.system, in: folder,
+                                              duration: sysResult.durationSeconds,
+                                              discontinuities: sysResult.discontinuities) {
+                tracks.append(info)
+            }
+            return tracks
+        }
     }
 
     /// CAF를 m4a로 바꾸고 TrackInfo를 만든다. 변환 실패 시 CAF를 그대로 보관한다.
@@ -268,6 +301,7 @@ final class RecorderController {
             try? store.save(s, in: folder)
             if !tracks.isEmpty { recovered += 1 }
         }
+        store.refresh()
         return recovered
     }
 

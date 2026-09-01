@@ -33,7 +33,10 @@ enum PostProcessRunner {
             if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 return transcript
             }
-            return PromptBuilder.extractContent(data) ?? transcript
+            // content가 nil이거나(파싱 실패) 빈 문자열이면(모델이 거부/공백 응답) 원문을 지킨다 —
+            // 여기서 STT 원문을 잃으면 사용자는 받아쓴 내용 자체를 통째로 잃는다.
+            let result = PromptBuilder.extractContent(data)
+            return (result?.isEmpty == false) ? result! : transcript
         } catch {
             return transcript
         }

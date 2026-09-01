@@ -6,9 +6,10 @@ import VoiceTypeCore
 struct SettingsView: View {
     @ObservedObject var vm: SettingsViewModel
     @ObservedObject var history = HistoryStore.shared
-    @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
+    @ObservedObject var recordings = RecordingStore.shared
     @EnvironmentObject var localization: LocalizationManager
     @StateObject private var micTester = MicTester()
+    @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
     @State private var draggedMicUID: String?
 
     private func t(_ key: String.LocalizationValue) -> String {
@@ -548,42 +549,66 @@ struct SettingsView: View {
 
     private var historyTab: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(t("history.title")).font(.headline)
-                Spacer()
-                if !history.entries.isEmpty {
-                    Button(t("history.delete.all"), role: .destructive) { history.clear() }
-                        .font(.caption)
-                }
-            }
-            Text(t("history.note"))
-                .font(.caption).foregroundStyle(.secondary)
-
             Toggle(t("history.saveRecordings"), isOn: $vm.settings.saveRecordings)
                 .toggleStyle(.switch)
+                .padding(.horizontal)
+                .padding(.top, 4)
 
-            if history.entries.isEmpty {
-                Spacer()
-                Text(t("history.empty"))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                Spacer()
-            } else {
-                List {
-                    ForEach(history.entries) { entry in
-                        HistoryRow(entry: entry,
-                                   onCopy: { TextInjector.copyToClipboard(entry.finalText) },
-                                   onDelete: { history.delete(entry.id) },
-                                   onRevealAudio: {
-                                       if let url = history.audioURL(for: entry) {
-                                           NSWorkspace.shared.activateFileViewerSelecting([url])
-                                       }
-                                   })
+            List {
+                Section {
+                    if recordings.entries.isEmpty {
+                        Text(t("history.f5.empty"))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(recordings.entries) { entry in
+                            RecordingRow(entry: entry,
+                                        onReveal: {
+                                            NSWorkspace.shared.activateFileViewerSelecting([entry.folder])
+                                        },
+                                        onCopyPath: {
+                                            if let url = entry.primaryAudioURL {
+                                                TextInjector.copyToClipboard(url.path)
+                                            }
+                                        },
+                                        onDelete: { recordings.delete(entry) })
+                        }
+                    }
+                } header: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t("history.f5.title")).font(.headline)
+                        Text(t("history.f5.note")).font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+
+                Section {
+                    if history.entries.isEmpty {
+                        Text(t("history.empty"))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(history.entries) { entry in
+                            HistoryRow(entry: entry,
+                                       onCopy: { TextInjector.copyToClipboard(entry.finalText) },
+                                       onDelete: { history.delete(entry.id) },
+                                       onRevealAudio: {
+                                           if let url = history.audioURL(for: entry) {
+                                               NSWorkspace.shared.activateFileViewerSelecting([url])
+                                           }
+                                       })
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Text(t("history.title")).font(.headline)
+                        Spacer()
+                        if !history.entries.isEmpty {
+                            Button(t("history.delete.all"), role: .destructive) { history.clear() }
+                                .font(.caption)
+                        }
                     }
                 }
             }
         }
-        .padding()
+        .onAppear { recordings.refresh() }
     }
 }
 
@@ -727,6 +752,64 @@ private struct HistoryRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// F5 녹음 회차 1건. mixed(마이크+시스템 병합) 또는 mic만 있을 수 있다.
+/// 병합 실패 시 폴백으로 mic+system이 개별 트랙으로 같이 들어올 수도 있다.
+private struct RecordingRow: View {
+    let entry: RecordingStore.Entry
+    let onReveal: () -> Void
+    let onCopyPath: () -> Void
+    let onDelete: () -> Void
+    @EnvironmentObject var localization: LocalizationManager
+
+    private func t(_ key: String.LocalizationValue) -> String {
+        localization.text(key)
+    }
+
+    private var badgeKey: String.LocalizationValue {
+        let kinds = Set(entry.session.tracks.map(\.kind))
+        if kinds.contains(.mixed) { return "history.f5.mixed" }
+        if kinds.contains(.system) { return "history.f5.mixed" }
+        if kinds.contains(.mic) { return "history.f5.mic.only" }
+        return "history.f5.failed"
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(entry.session.startedAt, format: .dateTime.month().day().hour().minute())
+                        .font(.body)
+                    Text(t(badgeKey))
+                        .font(.caption2)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Capsule().fill(Color.blue.opacity(0.15)))
+                }
+                Text(durationLabel)
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button { onCopyPath() } label: {
+                Label(t("history.f5.copyPath"), systemImage: "doc.on.doc")
+            }
+            .font(.caption).buttonStyle(.bordered).controlSize(.small)
+            Button { onReveal() } label: {
+                Label(t("history.f5.reveal"), systemImage: "folder")
+            }
+            .font(.caption).buttonStyle(.bordered).controlSize(.small)
+            Button(role: .destructive) { onDelete() } label: {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var durationLabel: String {
+        let s = Int(entry.session.durationSeconds)
+        return String(format: "%d:%02d", s / 60, s % 60)
     }
 }
 
