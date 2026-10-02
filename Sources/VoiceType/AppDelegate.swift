@@ -185,6 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         recorder.onError = { [weak self] msg in self?.notify(msg) }
+        recorder.onNotice = { [weak self] msg in self?.notify(msg, kind: .info) }
         recorder.onActionNeeded = { [weak self] issue in self?.notifyActionable(issue) }
         recorder.onMicLevel = { [weak self] level in self?.indicator.setLevel(level) }
         recorder.onSystemLevel = { [weak self] level in

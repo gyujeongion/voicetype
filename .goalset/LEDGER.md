@@ -10,3 +10,5 @@ append-only 진행 로그. 모듈 완료·파킹·막힘·방향 전환마다 1�
 - 2026-10-03 04:51 [M4] persist()가 appLanguage를 SettingsStore 현재값으로 보존(언어 되돌아감 수정), HotkeyRules(타자키·Esc 단독 거부, 프로파일·F5 중복 검출)+9테스트, HotkeyManager 등록 실패 id 보고→프로파일 카드 경고, 임시 단축키(Esc용) API · gs_check M4 PASS
 - 2026-10-03 04:53 [M5] 설정>일반에 'F5 회의 녹음' 섹션: 단축키 캡처(HotkeyRules 검사·등록실패 경고), 저장폴더 열기/변경/기본값(쓰기권한 확인), applyRecordingFolder로 재시작 없이 즉시 반영, 에러 문구를 실제 UI 경로로 · gs_check M5 PASS (화면 확인은 M10)
 - 2026-10-03 04:55 [M6] 히스토리: 앱 내 재생/정지(AudioPreviewPlayer, F8·F5 공통), 검색창(HistoryFilter: 최종본·원문·프로파일 AND 검색 +3테스트), 전체삭제 확인창, F5 녹음은 확인창+휴지통 이동(실패 시 아무것도 안 지움), 복사됨 표시 1.5초 후 복귀, 탭 닫으면 재생 정지 · gs_check M6 PASS
+- 2026-10-03 04:58 [M7] AudioCapture가 AVAudioEngineConfigurationChange 시 장치 재선택+tap/컨버터 재구성 재시작(0.3초 모음), F5 마이크·F8 받아쓰기 연결, 재연결/끊김 토스트 · --selftest-device-change 4: 재연결 1회, 파일 3.97초/4.0, 뒤1/4 유효샘플 78% SELFTEST_PASS
+- 2026-10-03 04:58 [pause] 사용자 요청으로 일시정지. 남은 모듈 M8·M9·M10. 재개: GS arm 후 M8부터

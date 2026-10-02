@@ -34,6 +34,8 @@
 "recorder.folder.choose.prompt" = "이 폴더에 저장";
 "recorder.folder.notWritable" = "이 폴더에는 쓸 수 없습니다: %@";
 "recorder.note" = "마이크와 컴퓨터 소리를 한 파일로 녹음합니다. 녹음 파일은 자동으로 지워지지 않습니다. 컴퓨터 소리는 화면 기록 권한이 있어야 함께 녹음됩니다.";
+"recorder.mic.reconnected" = "입력 장치가 바뀌어 마이크를 다시 연결했습니다. 녹음은 계속됩니다.";
+"recorder.mic.lost" = "마이크 입력이 끊겼습니다. 마이크를 연결하면 자동으로 이어서 녹음합니다.";
 "hotkey.conflict" = "%@ 은(는) 이미 '%@'에서 쓰고 있습니다.";
 "hotkey.registration.failed" = "이 단축키를 다른 앱이나 macOS가 이미 쓰고 있어 등록되지 않았습니다. 다른 조합을 지정하세요.";
 "indicator.recording" = "녹음 중";

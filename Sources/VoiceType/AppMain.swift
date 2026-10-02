@@ -38,6 +38,13 @@ enum AppMain {
             exit(written.isEmpty ? 1 : 0)
         }
 
+        // 녹음 중 입력 장치 구성 변경 복구 실측. --selftest-device-change [초] (기본 4)
+        if let idx = args.firstIndex(of: "--selftest-device-change") {
+            let seconds = (idx + 1 < args.count ? Double(args[idx + 1]) : nil) ?? 4
+            DeviceChangeSelfTest.run(seconds: seconds)
+            return
+        }
+
         // 마이크 녹음 실측 (GUI 없이 캡처 파이프라인 검증). --record-audio [초] (기본 10)
         if let idx = args.firstIndex(of: "--record-audio") {
             let seconds = (idx + 1 < args.count ? Double(args[idx + 1]) : nil) ?? 10

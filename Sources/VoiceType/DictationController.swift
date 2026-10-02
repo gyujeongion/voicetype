@@ -109,6 +109,20 @@ final class DictationController {
                      terms: settings.dictionary.hintTerms(),
                      customEndpoint: customEndpoint)
         capture.onPCM = { [weak engine] data in engine?.sendAudio(data) }
+        // 받아쓰는 도중 입력 장치가 바뀌면(에어팟 분리 등) 다시 붙는다 — 안 그러면 그 뒤로 무음만 간다
+        capture.deviceResolver = {
+            MainActor.assumeIsolated {
+                let s = SettingsStore.shared.settings
+                return AudioDevices.resolve(selectedUID: s.selectedMicrophoneUID,
+                                            priority: s.microphonePriority)?.deviceID
+            }
+        }
+        capture.onReconfigured = { [weak self] ok in
+            MainActor.assumeIsolated {
+                guard let self, self.sessionToken == token, !ok else { return }
+                self.onNotice?(LocalizationManager.shared.text("recorder.mic.lost"))
+            }
+        }
         capture.onLevel = { [weak self] level in
             MainActor.assumeIsolated { self?.onLevel?(level) }
         }

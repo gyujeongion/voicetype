@@ -34,6 +34,8 @@
 "recorder.folder.choose.prompt" = "Save Here";
 "recorder.folder.notWritable" = "Can't write to this folder: %@";
 "recorder.note" = "Records your mic and computer audio into one file. Recordings are never deleted automatically. Computer audio requires Screen Recording permission.";
+"recorder.mic.reconnected" = "The input device changed, so the mic was reconnected. Recording continues.";
+"recorder.mic.lost" = "Mic input was lost. Recording resumes automatically when a mic is connected.";
 "hotkey.conflict" = "%@ is already used by '%@'.";
 "hotkey.registration.failed" = "Another app or macOS already uses this shortcut, so it couldn't be registered. Pick a different one.";
 "indicator.recording" = "Recording";

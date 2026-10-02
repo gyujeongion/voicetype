@@ -32,6 +32,8 @@ final class RecorderController {
 
     var onStateChange: ((State) -> Void)?
     var onError: ((String) -> Void)?
+    /// 녹음은 계속되지만 알려 줄 일 (장치 재연결 등) — 정보 토스트
+    var onNotice: ((String) -> Void)?
     /// 사용자가 설정을 바꿔야만 풀리는 문제 (권한) — 해결 버튼이 달린 창으로 보여준다
     var onActionNeeded: ((UserActionNeeded) -> Void)?
     var onMicLevel: ((Float) -> Void)?
@@ -100,6 +102,14 @@ final class RecorderController {
 
         // 레이어 1 — 마이크. 이게 실패하면 녹음 자체가 실패다.
         mic.onLevel = { [weak self] in self?.onMicLevel?($0) }
+        mic.onDeviceReconnected = { [weak self] ok in
+            guard let self, self.state == .recording else { return }
+            if ok {
+                self.onNotice?(LocalizationManager.shared.text("recorder.mic.reconnected"))
+            } else {
+                self.onError?(LocalizationManager.shared.text("recorder.mic.lost"))
+            }
+        }
         do {
             try mic.start(to: created.folder.appendingPathComponent("mic.caf"))
         } catch {

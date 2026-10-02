@@ -13,7 +13,10 @@ final class MicTrackRecorder {
     private var writer: CAFWriter?
 
     var onLevel: ((Float) -> Void)?
+    /// 녹음 중 입력 장치가 바뀌어 다시 연결했을 때 (true=복구됨, false=입력 장치 없음)
+    var onDeviceReconnected: ((Bool) -> Void)?
     var isRunning: Bool { capture.isRunning }
+    var restartCount: Int { capture.restartCount }
 
     /// 설정의 마이크 우선순위를 적용해 녹음을 시작한다.
     func start(to url: URL) throws {
@@ -29,6 +32,17 @@ final class MicTrackRecorder {
         capture.onLevel = { [weak self] level in
             MainActor.assumeIsolated { self?.onLevel?(level) }
         }
+        // 장치가 바뀌면 그 시점 설정 규칙(에어팟 > 선택 > 우선순위 > 기본)으로 다시 고른다
+        capture.deviceResolver = {
+            MainActor.assumeIsolated {
+                let s = SettingsStore.shared.settings
+                return AudioDevices.resolve(selectedUID: s.selectedMicrophoneUID,
+                                            priority: s.microphonePriority)?.deviceID
+            }
+        }
+        capture.onReconfigured = { [weak self] ok in
+            MainActor.assumeIsolated { self?.onDeviceReconnected?(ok) }
+        }
         do {
             try capture.start(deviceID: device?.deviceID)
         } catch {
@@ -40,10 +54,15 @@ final class MicTrackRecorder {
         }
     }
 
+    /// 자기검증용 — 장치 구성 변경 상황 재현
+    func simulateConfigurationChange() { capture.simulateConfigurationChange() }
+
     func stop() -> (durationSeconds: Double, discontinuities: [DiscontinuityRecord], dropped: Int) {
         capture.stop()
         capture.onPCMDetailed = nil
         capture.onLevel = nil
+        capture.onReconfigured = nil
+        capture.deviceResolver = nil
         guard let w = writer else { return (0, [], 0) }
         let result = w.finish()
         let dropped = w.droppedBufferCount
@@ -146,5 +165,55 @@ enum RecordAudioCLI {
         }
         return (duration, peak, Float((sumSq / Double(n)).squareRoot()),
                 Double(silentFrames) / Double(n))
+    }
+}
+
+/// 녹음 중 입력 장치 구성 변경(에어팟 분리 등)이 와도 마이크 트랙이 이어지는지 실측한다.
+/// `VoiceType --selftest-device-change 4` → 절반 지점에서 구성 변경을 재현하고,
+/// 재연결 1회 이상 + 파일 길이 ≈ 요청 길이 + 뒷부분에 실제 오디오가 있으면 SELFTEST_PASS.
+enum DeviceChangeSelfTest {
+    @MainActor
+    static func run(seconds: Double) {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("voicetype-selftest", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("mic.caf")
+        try? FileManager.default.removeItem(at: url)
+
+        let rec = MicTrackRecorder()
+        var reconnects: [Bool] = []
+        rec.onDeviceReconnected = { reconnects.append($0) }
+        do { try rec.start(to: url) } catch {
+            print("SELFTEST_FAIL 녹음 시작 실패: \(error.localizedDescription)")
+            exit(1)
+        }
+        // 메인 큐가 돌아야 재시작(asyncAfter)이 실행된다 — sleep 대신 런루프를 돌린다
+        RunLoop.main.run(until: Date().addingTimeInterval(seconds / 2))
+        print("구성 변경 재현")
+        rec.simulateConfigurationChange()
+        RunLoop.main.run(until: Date().addingTimeInterval(seconds / 2))
+        let r = rec.stop()
+
+        let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? -1
+        // 처리 포맷을 Int16으로 지정해야 int16ChannelData로 읽힌다 (기본은 Float32)
+        guard let file = try? AVAudioFile(forReading: url, commonFormat: .pcmFormatInt16, interleaved: true),
+              let buf = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(max(1, file.length))),
+              (try? file.read(into: buf)) != nil, let ch = buf.int16ChannelData else {
+            print("SELFTEST_FAIL 파일을 읽을 수 없음 (크기 \(size)B, 기록 \(r.durationSeconds)초, 재연결 \(reconnects))")
+            exit(1)
+        }
+        let n = Int(buf.frameLength)
+        let duration = Double(n) / file.fileFormat.sampleRate
+        let tailStart = n * 3 / 4
+        var nonZero = 0
+        for i in tailStart..<n where ch[0][i] != 0 { nonZero += 1 }
+        let tailRatio = Double(nonZero) / Double(max(1, n - tailStart))
+        print(String(format: "재연결 %d회 %@ / 파일 %.2f초(요청 %.1f) / 기록 %.2f초 / 뒤 1/4 유효샘플 %.0f%% / 불연속 %d건",
+                     rec.restartCount, reconnects.description, duration, seconds, r.durationSeconds,
+                     tailRatio * 100, r.discontinuities.count))
+        let ok = rec.restartCount >= 1 && reconnects.contains(true)
+            && abs(duration - seconds) < 0.8 && tailRatio > 0.5
+        print(ok ? "SELFTEST_PASS" : "SELFTEST_FAIL")
+        exit(ok ? 0 : 1)
     }
 }

@@ -9,7 +9,10 @@ final class ConsumedFlag: @unchecked Sendable {
 
 /// 마이크 → 16kHz mono s16le PCM 스트림.
 /// 선택된 입력 장치를 AVAudioEngine 입력 유닛에 적용하고, tap에서 실시간 변환해 콜백한다.
-final class AudioCapture {
+///
+/// 제어(start/stop/재시작)는 메인 스레드, 변환은 오디오 스레드. 재시작 때는 tap을 먼저 떼고
+/// 컨버터를 바꾸므로 두 스레드가 같은 컨버터를 동시에 만지지 않는다 — 그래서 @unchecked Sendable.
+final class AudioCapture: @unchecked Sendable {
     private let engine = AVAudioEngine()
     private var converter: AVAudioConverter?
     private let targetFormat: AVAudioFormat
@@ -26,6 +29,16 @@ final class AudioCapture {
     var onPCMDetailed: ((Data, Int, Double) -> Void)?
     /// 경과 시각 산출 기준. start()에서 설정된다.
     private var sessionStartHostTime: UInt64 = 0
+
+    /// 입력 장치 구성이 바뀌어(에어팟 분리·USB 마이크 뽑힘·기본 입력 변경) 엔진이 멈췄을 때 다시 붙을
+    /// 장치를 고른다. nil을 돌려주면 시스템 기본 입력. 없으면 시스템 기본 입력.
+    var deviceResolver: (() -> AudioDeviceID?)?
+    /// 구성 변경 후 재연결 결과 (true=다시 녹음 중). 메인 스레드.
+    var onReconfigured: ((Bool) -> Void)?
+    /// 지금까지 재연결한 횟수 (검증·진단용)
+    private(set) var restartCount = 0
+    private var configObserver: NSObjectProtocol?
+    private var restartPending = false
 
     init() {
         targetFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
@@ -84,6 +97,66 @@ final class AudioCapture {
         }
         sessionStartHostTime = mach_absolute_time()
         isRunning = true
+        restartCount = 0
+        observeConfigurationChanges()
+    }
+
+    // MARK: - 장치 구성 변경 복구
+
+    /// AVAudioEngine은 입력 장치 구성이 바뀌면 스스로 멈추고 알림만 보낸다. 처리하지 않으면
+    /// 녹음은 "진행 중"으로 보이는데 버퍼가 더 오지 않아, 회의 녹음 뒷부분이 통째로 빠진다.
+    private func observeConfigurationChanges() {
+        guard configObserver == nil else { return }
+        configObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
+        ) { [weak self] _ in
+            self?.scheduleRestart()
+        }
+    }
+
+    /// 장치 전환 중엔 알림이 연달아 오므로 잠깐 모았다가 한 번만 재시작한다.
+    private func scheduleRestart() {
+        guard isRunning, !restartPending else { return }
+        restartPending = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.restartAfterConfigurationChange()
+        }
+    }
+
+    private func restartAfterConfigurationChange() {
+        restartPending = false
+        guard isRunning else { return }
+        let input = engine.inputNode
+        input.removeTap(onBus: 0)
+        engine.stop()
+        // 명시적으로 지정했던 장치가 사라졌을 수 있으니 다시 고른다. 못 고르면 시스템 기본 입력으로.
+        if let dev = deviceResolver?() ?? AudioDevices.defaultInputDevice() {
+            try? setInputDevice(dev)
+        }
+        let inputFormat = input.inputFormat(forBus: 0)
+        guard inputFormat.sampleRate > 0 else {
+            onReconfigured?(false)   // 입력 장치가 하나도 없음 — 다음 구성 변경(장치 연결) 때 다시 시도
+            return
+        }
+        converter = AVAudioConverter(from: inputFormat, to: targetFormat)
+        input.installTap(onBus: 0, bufferSize: 1600, format: inputFormat) { [weak self] buffer, _ in
+            self?.process(buffer)
+        }
+        engine.prepare()
+        do {
+            try engine.start()
+            restartCount += 1
+            onReconfigured?(true)
+        } catch {
+            input.removeTap(onBus: 0)
+            onReconfigured?(false)
+        }
+    }
+
+    /// 자기검증용: 실제 장치를 뽑지 않고 구성 변경 상황을 재현한다 (엔진 정지 + 알림).
+    func simulateConfigurationChange() {
+        engine.stop()
+        NotificationCenter.default.post(name: .AVAudioEngineConfigurationChange, object: engine)
     }
 
     // MARK: - 호스트 시각
@@ -104,6 +177,11 @@ final class AudioCapture {
     }
 
     func stop() {
+        if let obs = configObserver {
+            NotificationCenter.default.removeObserver(obs)
+            configObserver = nil
+        }
+        restartPending = false
         guard isRunning else { return }
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
