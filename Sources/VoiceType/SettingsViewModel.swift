@@ -32,6 +32,12 @@ final class SettingsViewModel: ObservableObject {
 
     /// 프로파일/단축키 변경 시 핫키 재등록 콜백 (AppDelegate가 연결)
     var onProfilesChange: (() -> Void)?
+    /// F5 녹음 저장 폴더가 바뀌었을 때 (AppDelegate가 RecordingStore에 즉시 반영)
+    var onRecordingFolderChange: (() -> Void)?
+
+    // F5 녹음 단축키 캡처
+    @Published var capturingRecordingHotkey = false
+    @Published var recordingHotkeyMessage: String?
 
     init() {
         let store = SettingsStore.shared
@@ -370,6 +376,71 @@ final class SettingsViewModel: ObservableObject {
     var availableToAdd: [AudioInputDevice] {
         devices.filter { !settings.microphonePriority.contains($0.id) }
     }
+
+    // MARK: - F5 녹음 설정
+
+    var recordingHotkeyDisplay: String {
+        settings.recordingHotkeyKeyCode == 0
+            ? LocalizationManager.shared.text("prompts.profile.unassigned")
+            : KeyNames.display(keyCode: settings.recordingHotkeyKeyCode, modifiers: settings.recordingHotkeyModifiers)
+    }
+
+    var recordingHotkeyRegistrationFailed: Bool {
+        failedHotkeyIDs.contains(AppDelegate.recordingHotkeyID)
+    }
+
+    func applyRecordingHotkey(keyCode: UInt32, modifiers: UInt32) {
+        capturingRecordingHotkey = false
+        if let reason = hotkeyProblem(keyCode: keyCode, modifiers: modifiers, profileID: nil, isRecording: true) {
+            recordingHotkeyMessage = reason
+            return
+        }
+        recordingHotkeyMessage = nil
+        settings.recordingHotkeyKeyCode = keyCode
+        settings.recordingHotkeyModifiers = modifiers
+    }
+
+    /// 실제로 쓰이는 녹음 루트 (빈 설정 = 기본 폴더)
+    var recordingFolderURL: URL {
+        settings.recordingFolderPath.isEmpty
+            ? RecordingStore.defaultRoot
+            : URL(fileURLWithPath: settings.recordingFolderPath, isDirectory: true)
+    }
+
+    var recordingFolderIsDefault: Bool { settings.recordingFolderPath.isEmpty }
+
+    func chooseRecordingFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = recordingFolderURL
+        panel.prompt = LocalizationManager.shared.text("recorder.folder.choose.prompt")
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard FileManager.default.isWritableFile(atPath: url.path) else {
+            recordingHotkeyMessage = nil
+            recordingFolderMessage = String(format: LocalizationManager.shared.text("recorder.folder.notWritable"), url.path)
+            return
+        }
+        recordingFolderMessage = nil
+        settings.recordingFolderPath = url.path
+        onRecordingFolderChange?()
+    }
+
+    func resetRecordingFolder() {
+        recordingFolderMessage = nil
+        settings.recordingFolderPath = ""
+        onRecordingFolderChange?()
+    }
+
+    func openRecordingFolder() {
+        let url = recordingFolderURL
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(url)
+    }
+
+    @Published var recordingFolderMessage: String?
 
     // MARK: - 프로파일 단축키 캡처
 

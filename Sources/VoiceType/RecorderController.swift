@@ -61,7 +61,7 @@ final class RecorderController {
         setState(.starting)
 
         guard store.isWritable(store.rootURL) else {
-            onError?("녹음 폴더에 쓸 수 없습니다:\n\(store.rootURL.path)\n설정에서 다른 폴더를 지정하세요.")
+            onError?("녹음 폴더에 쓸 수 없습니다:\n\(store.rootURL.path)\n설정 > 일반 > F5 회의 녹음에서 다른 폴더를 지정하세요.")
             setState(.idle)
             return
         }

@@ -152,11 +152,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func setupRecorder() {
+    /// 설정의 녹음 폴더를 RecordingStore에 반영. 시작 시 + 설정에서 바꿀 때마다 (재시작 불필요).
+    /// 진행 중인 녹음은 자기 회차 폴더 경로를 이미 들고 있어 영향받지 않는다.
+    private func applyRecordingFolder() {
         let path = SettingsStore.shared.settings.recordingFolderPath
-        if !path.isEmpty {
-            RecordingStore.shared.rootURL = URL(fileURLWithPath: path, isDirectory: true)
-        }
+        let url = path.isEmpty ? RecordingStore.defaultRoot : URL(fileURLWithPath: path, isDirectory: true)
+        if RecordingStore.shared.rootURL != url { RecordingStore.shared.rootURL = url }
+    }
+
+    private func setupRecorder() {
+        applyRecordingFolder()
+        settingsVM.onRecordingFolderChange = { [weak self] in self?.applyRecordingFolder() }
         recorder.onStateChange = { [weak self] state in
             guard let self = self else { return }
             self.updateRecordingIcon(state)

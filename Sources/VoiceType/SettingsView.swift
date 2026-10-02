@@ -352,6 +352,62 @@ struct SettingsView: View {
                 }
             }
 
+            Section(t("recorder.section")) {
+                HStack {
+                    Text(t("recorder.hotkey"))
+                    Spacer()
+                    Button(vm.capturingRecordingHotkey ? t("prompts.profile.hotkey.cancel") : vm.recordingHotkeyDisplay) {
+                        vm.capturingRecordingHotkey.toggle()
+                    }
+                    .frame(minWidth: 110)
+                    .background(
+                        Group {
+                            if vm.capturingRecordingHotkey {
+                                HotkeyCaptureView(
+                                    onCapture: { keyCode, mods in vm.applyRecordingHotkey(keyCode: keyCode, modifiers: mods) },
+                                    onCancel: { vm.capturingRecordingHotkey = false }
+                                )
+                                .opacity(0)
+                            }
+                        }
+                    )
+                }
+                if let message = vm.recordingHotkeyMessage {
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                } else if vm.recordingHotkeyRegistrationFailed {
+                    Label(t("hotkey.registration.failed"), systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(t("recorder.folder"))
+                        Spacer()
+                        Button(t("recorder.folder.open")) { vm.openRecordingFolder() }
+                            .font(.caption)
+                        Button(t("recorder.folder.change")) { vm.chooseRecordingFolder() }
+                            .font(.caption)
+                        if !vm.recordingFolderIsDefault {
+                            Button(t("recorder.folder.reset")) { vm.resetRecordingFolder() }
+                                .font(.caption)
+                        }
+                    }
+                    Text(vm.recordingFolderURL.path)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                }
+                if let message = vm.recordingFolderMessage {
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                Text(t("recorder.note"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section(t("indicator.section")) {
                 Picker(t("indicator.style"), selection: $vm.settings.indicatorStyle) {
                     ForEach(IndicatorStyle.allCases, id: \.self) { style in
