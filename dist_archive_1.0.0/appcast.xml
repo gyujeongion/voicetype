@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>VoiceType</title>
+        <item>
+            <title>1.0.0</title>
+            <pubDate>Wed, 24 Jun 2026 05:13:39 +0900</pubDate>
+            <sparkle:version>1.0.0</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://github.com/gyujeongion/voicetype/releases/latest/download/VoiceType-1.0.0.zip" length="1514964" type="application/octet-stream" sparkle:edSignature="G7lmDbXWHSi5e9Nsf7KToAMB1VeG6+eF+CjwiRX+GQTSsEeeae0JGAhCYleEzQf7avMWU2dNvucXrTclc0hBCQ=="/>
+        </item>
+    </channel>
+</rss>

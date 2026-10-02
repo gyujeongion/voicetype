@@ -1,0 +1,47 @@
+{
+ "profiles": [
+  [
+   "41A4D746-8F2C-42F0-92EF-2EB881B6AAE5",
+   "받아쓰기",
+   100,
+   0,
+   true,
+   "toggle",
+   "be86e729c4eb"
+  ],
+  [
+   "0A140A01-685A-4F6F-9DBD-4F23051A438F",
+   "영어 번역",
+   98,
+   0,
+   true,
+   "toggle",
+   "28a1bd1005eb"
+  ]
+ ],
+ "dictionary": "61cb1dcd2f3f",
+ "microphonePriority": [
+  "AppleUSBAudioEngine:Unknown Manufacturer:USB Audio Device:2124200:1",
+  "08-FF-44-05-8E-E0:input",
+  "AppleUSBAudioEngine:Unknown Manufacturer:USB Audio Device:1111100:1",
+  "AppleUSBAudioEngine:Unknown Manufacturer:USB Audio Device:1141000:1",
+  "BuiltInMicrophoneDevice",
+  "AppleUSBAudioEngine:Unknown Manufacturer:USB Audio Device:122000:1"
+ ],
+ "llm_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+ "llm_model": "gemini-3.1-flash-lite",
+ "stt_provider": "deepgram",
+ "spaceBar": [
+  true,
+  6,
+  [
+   "com.ableton.live",
+   "com.pioneerdj.rekordboxdj"
+  ]
+ ],
+ "appLanguage": "ko",
+ "recordingHotkey": [
+  96,
+  0
+ ]
+}

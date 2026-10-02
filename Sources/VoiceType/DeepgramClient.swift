@@ -76,8 +76,15 @@ final class DeepgramClient: NSObject, STTEngine, @unchecked Sendable {
 
     func cancel() {
         done = true
+        teardown()
+    }
+
+    /// 소켓을 닫고 세션을 무효화한다. URLSession은 invalidate하지 않으면 해제되지 않아
+    /// 받아쓰기마다 세션이 하나씩 쌓인다.
+    private func teardown() {
         task?.cancel(with: .goingAway, reason: nil)
         task = nil
+        session?.invalidateAndCancel()
         session = nil
     }
 
@@ -134,18 +141,14 @@ final class DeepgramClient: NSObject, STTEngine, @unchecked Sendable {
         guard !done else { return }
         done = true
         let text = finalSegments.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-        task?.cancel(with: .goingAway, reason: nil)
-        task = nil
-        session = nil
+        teardown()
         DispatchQueue.main.async { [weak self] in self?.onFinished?(text) }
     }
 
     private func fail(_ error: Error) {
         guard !done else { return }
         done = true
-        task?.cancel(with: .goingAway, reason: nil)
-        task = nil
-        session = nil
+        teardown()
         DispatchQueue.main.async { [weak self] in self?.onError?(error) }
     }
 }

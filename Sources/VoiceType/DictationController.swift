@@ -148,6 +148,12 @@ final class DictationController {
     }
 
     private func handleFinal(text: String, settings: AppSettings) {
+        // STT 결과가 도착했으니 "STT 응답 지연" 가드는 여기서 끝낸다. 안 끄면 LLM 후처리(최대 30초)가
+        // 15초를 넘길 때 가짜 지연 에러가 뜨고 상태가 idle로 풀려, 그 사이 시작한 새 세션을
+        // 아래 Task의 cleanup()이 죽인다.
+        finishTimeout?.cancel()
+        finishTimeout = nil
+        let token = sessionToken
         capture.stop()
         let store = SettingsStore.shared
         let profile = activeProfile
@@ -166,6 +172,11 @@ final class DictationController {
                                                   llm: settings.llm,
                                                   apiKey: store.llmAPIKey(for: settings.llm.endpoint),
                                                   glossary: settings.dictionary.hintTerms())
+            }
+            // 후처리 동안 세션이 취소됐으면(Esc 등) 붙여넣지 않고, 이미 시작된 다른 세션도 건드리지 않는다.
+            guard self.sessionToken == token else {
+                if let recordingURL = recordingURL { try? FileManager.default.removeItem(at: recordingURL) }
+                return
             }
             // 단어사전은 STT context.terms 로 인식 단계에서 이미 교정됨 (별도 후처리 불필요)
             if !out.isEmpty {

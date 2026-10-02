@@ -70,6 +70,7 @@ enum KeyTester {
             let done: @Sendable (Result) -> Void = { r in
                 if finished.testAndSet() { return }
                 task.cancel(with: .goingAway, reason: nil)
+                session.invalidateAndCancel()
                 cont.resume(returning: r)
             }
             task.resume()
@@ -78,6 +79,10 @@ enum KeyTester {
                 task.send(.string(String(decoding: data, as: UTF8.self))) { err in
                     if let err = err { done(.fail(networkMessage(err))) }
                 }
+                // 오디오가 없으면 정상 키여도 서버가 아무 응답을 안 보내 12초 타임아웃으로
+                // "실패" 판정이 난다. 0.1초 무음 + finalize를 보내 응답을 받아낸다.
+                task.send(.data(Data(count: 3200))) { _ in }
+                task.send(.string(Soniox.finalizeMessage())) { _ in }
             }
             // 첫 응답 수신: 에러코드면 키 문제, 정상 토큰 메시지면 성공
             task.receive { result in
@@ -124,14 +129,18 @@ enum KeyTester {
             let done: @Sendable (Result) -> Void = { r in
                 if finished.testAndSet() { return }
                 task.cancel(with: .goingAway, reason: nil)
+                session.invalidateAndCancel()
                 cont.resume(returning: r)
             }
             task.resume()
             // 핑 전송으로 연결 확인
             task.sendPing { err in
                 if let err = err {
+                    // 키가 틀리면 웹소켓 업그레이드가 HTTP 401로 거절되고, 에러 자체는
+                    // NSURLErrorBadServerResponse라 코드만 봐선 키 문제인지 알 수 없다.
+                    let status = (task.response as? HTTPURLResponse)?.statusCode
                     let ns = err as NSError
-                    if ns.code == 401 || ns.code == 403 {
+                    if status == 401 || status == 403 || ns.code == 401 || ns.code == 403 {
                         done(.fail("Deepgram 키가 유효하지 않습니다."))
                     } else {
                         done(.fail(networkMessage(err)))

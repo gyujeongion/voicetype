@@ -6,3 +6,6 @@ dist/
 *.aiff
 .DS_Store
 dist/
+
+# goalset 로컬 백업 (사용자 설정 사본 — 커밋 금지)
+.goalset/settings_backup_*
