@@ -160,6 +160,8 @@ public struct AppSettings: Codable, Sendable {
         languageHints = (try? c.decode([String].self, forKey: .languageHints)) ?? ["ko", "en"]
         dictionary = (try? c.decode(TermDictionary.self, forKey: .dictionary)) ?? TermDictionary()
         llm = (try? c.decode(LLMConfig.self, forKey: .llm)) ?? LLMConfig()
+        // 제공사가 내린 모델명이 저장돼 있으면 대체 모델로 이관 — 안 하면 후처리가 매번 404
+        llm.model = LLMPresets.migratedModel(endpoint: llm.endpoint, model: llm.model)
         stt = (try? c.decode(STTConfig.self, forKey: .stt)) ?? STTConfig()
         autoPaste = (try? c.decode(Bool.self, forKey: .autoPaste)) ?? true
         copyToClipboard = (try? c.decode(Bool.self, forKey: .copyToClipboard)) ?? true

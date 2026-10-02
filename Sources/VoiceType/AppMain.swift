@@ -132,7 +132,8 @@ enum CLITranscriber {
                 let r = await PostProcessRunner.run(transcript: input, instruction: inst,
                                                     llm: cfg, apiKey: lkey,
                                                     glossary: settings.dictionary.hintTerms())
-                box.value = r
+                box.value = r.text
+                if let f = r.failure { FileHandle.standardError.write(Data("LLM 후처리 실패: \(f)\n".utf8)) }
                 sem2.signal()
             }
             while sem2.wait(timeout: .now()) == .timedOut {

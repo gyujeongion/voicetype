@@ -137,6 +137,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.indicator.hide()
             self?.notify(msg)
         }
+        dictation.onNotice = { [weak self] msg in
+            self?.notify(msg)
+        }
         dictation.onInterim = { [weak self] text in
             self?.statusItem.button?.toolTip = text.isEmpty ? "VoiceType" : text
         }

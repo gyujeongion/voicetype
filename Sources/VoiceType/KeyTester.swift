@@ -34,25 +34,17 @@ enum KeyTester {
             if let apiKey, !apiKey.isEmpty {
                 req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
             }
-            let body: [String: Any] = [
+            var body: [String: Any] = [
                 "model": config.model,
                 "max_tokens": 1,
                 "messages": [["role": "user", "content": "hi"]],
             ]
+            body.merge(PromptBuilder.providerExtras(endpoint: config.endpoint)) { _, new in new }
             req.httpBody = try JSONSerialization.data(withJSONObject: body)
             let (data, resp) = try await URLSession.shared.data(for: req)
             guard let http = resp as? HTTPURLResponse else { return .fail("응답을 받지 못했습니다.") }
-            switch http.statusCode {
-            case 200..<300: return .ok("LLM 연결 성공 (\(config.model))")
-            case 401, 403: return .fail("LLM 키가 유효하지 않습니다. 키를 확인하세요.")
-            case 402: return .fail("LLM 계정 잔액이 부족합니다.")
-            case 404: return .fail("모델명 '\(config.model)'을 찾을 수 없습니다. 모델명을 확인하세요.")
-            case 429: return .fail("요청 한도(rate limit)를 초과했습니다. 잠시 후 다시 시도하세요.")
-            default:
-                let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])
-                    .flatMap { ($0?["error"] as? [String: Any])?["message"] as? String }
-                return .fail("LLM 오류 (\(http.statusCode))\(msg.map { ": \($0)" } ?? "")")
-            }
+            if (200..<300).contains(http.statusCode) { return .ok("LLM 연결 성공 (\(config.model))") }
+            return .fail(PostProcessRunner.httpFailureMessage(status: http.statusCode, data: data, model: config.model))
         } catch {
             return .fail(networkMessage(error))
         }

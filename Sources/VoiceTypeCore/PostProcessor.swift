@@ -3,11 +3,11 @@ import Foundation
 /// LLM 후처리 공통 설정 (엔드포인트/모델) — 모든 프로파일이 공유.
 public struct LLMConfig: Codable, Sendable {
     public var endpoint: String   // OpenAI 호환 chat/completions
-    public var model: String      // gpt-4o-mini, deepseek-chat 등
+    public var model: String      // gemini-3.1-flash-lite, gpt-4.1-nano 등
     public var temperature: Double
 
-    public init(endpoint: String = "https://api.deepseek.com/v1/chat/completions",
-                model: String = "deepseek-chat",   // non-reasoning — 받아쓰기 후처리에 빠름(~0.9s)
+    public init(endpoint: String = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                model: String = "gemini-3.1-flash-lite",   // non-reasoning, 무료 티어, 한국어 강함
                 temperature: Double = 0.3) {
         self.endpoint = endpoint
         self.model = model
@@ -62,7 +62,7 @@ public enum PromptBuilder {
             ? "How much do residential proxies usually cost, and which providers are well-known?"
             : "레지던셜 프록시 가격이 얼마 정도 하지? 그리고 유명한 업체는 뭐가 있나?"
 
-        return [
+        var body: [String: Any] = [
             "model": config.model,
             "temperature": config.temperature,
             "messages": [
@@ -72,6 +72,16 @@ public enum PromptBuilder {
                 ["role": "user",      "content": "<transcript>\(transcript)</transcript>"],
             ],
         ]
+        body.merge(providerExtras(endpoint: config.endpoint)) { _, new in new }
+        return body
+    }
+
+    /// 제공사별 추가 파라미터. 다른 제공사는 모르는 필드를 400으로 거절할 수 있어 해당 제공사에만 붙인다.
+    public static func providerExtras(endpoint: String) -> [String: Any] {
+        if LLMPresets.isDeepSeek(endpoint) {
+            return ["thinking": ["type": "disabled"]]
+        }
+        return [:]
     }
 
     public static func requestBodyData(transcript: String,

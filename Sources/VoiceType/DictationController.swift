@@ -30,6 +30,8 @@ final class DictationController {
     var onStateChange: ((State) -> Void)?
     var onInterim: ((String) -> Void)?
     var onError: ((String) -> Void)?
+    /// 흐름은 계속되지만 사용자가 알아야 하는 일(후처리 실패 등) — 비차단 알림용
+    var onNotice: ((String) -> Void)?
     /// 마이크 입력 레벨(RMS 0~1) — 인디케이터 레벨미터용
     var onLevel: ((Float) -> Void)?
 
@@ -167,11 +169,16 @@ final class DictationController {
             var pasted = false
             // 프로파일이 LLM 사용 시에만 후처리 (번역/요약/정리 등)
             if let profile = profile, profile.useLLM {
-                out = await PostProcessRunner.run(transcript: out,
-                                                  instruction: profile.instruction,
-                                                  llm: settings.llm,
-                                                  apiKey: store.llmAPIKey(for: settings.llm.endpoint),
-                                                  glossary: settings.dictionary.hintTerms())
+                let outcome = await PostProcessRunner.run(transcript: out,
+                                                          instruction: profile.instruction,
+                                                          llm: settings.llm,
+                                                          apiKey: store.llmAPIKey(for: settings.llm.endpoint),
+                                                          glossary: settings.dictionary.hintTerms())
+                out = outcome.text
+                // 실패는 흐름을 끊지 않되 알린다 — 안 알리면 "영어 번역"이 한국어 원문을 붙여넣어도 모른다.
+                if let reason = outcome.failure, !out.isEmpty, self.sessionToken == token {
+                    self.onNotice?("'\(profile.name)' 후처리에 실패해 원문을 붙여넣었습니다.\n\(reason)")
+                }
             }
             // 후처리 동안 세션이 취소됐으면(Esc 등) 붙여넣지 않고, 이미 시작된 다른 세션도 건드리지 않는다.
             guard self.sessionToken == token else {

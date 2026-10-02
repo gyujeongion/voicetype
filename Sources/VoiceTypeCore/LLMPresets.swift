@@ -35,16 +35,16 @@ public enum LLMPresets {
     public static let all: [LLMPreset] = [
         LLMPreset(name: "Groq",
                   endpoint: "https://api.groq.com/openai/v1/chat/completions",
-                  defaultModel: "llama-3.1-8b-instant",
-                  note: "Fastest (~0.1–0.2s). Free tier available. console.groq.com"),
+                  defaultModel: "openai/gpt-oss-20b",
+                  note: "Fastest (~0.2s). Free tier available. console.groq.com"),
         LLMPreset(name: "Gemini",
                   endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-                  defaultModel: "gemini-2.5-flash-lite",
-                  note: "Fast (~0.4s). Strong Korean. aistudio.google.com"),
+                  defaultModel: "gemini-3.1-flash-lite",
+                  note: "Fast (~0.4s). Strong Korean. Free tier available. aistudio.google.com"),
         LLMPreset(name: "DeepSeek",
                   endpoint: "https://api.deepseek.com/v1/chat/completions",
-                  defaultModel: "deepseek-chat",
-                  note: "Fast (~0.9s). Use deepseek-chat only — deepseek-reasoner adds 4–6s delay."),
+                  defaultModel: "deepseek-v4-flash",
+                  note: "Fast (~0.9s). VoiceType turns thinking mode off automatically (it adds 5–15s)."),
         LLMPreset(name: "Claude",
                   endpoint: "https://api.anthropic.com/v1/chat/completions",
                   defaultModel: "claude-haiku-4-5",
@@ -55,7 +55,7 @@ public enum LLMPresets {
                   note: "Reliable. platform.openai.com"),
         LLMPreset(name: "OpenRouter",
                   endpoint: "https://openrouter.ai/api/v1/chat/completions",
-                  defaultModel: "google/gemini-2.5-flash-lite",
+                  defaultModel: "google/gemini-3.1-flash-lite",
                   note: "Access any model with one key. openrouter.ai"),
         LLMPreset(name: "Ollama",
                   endpoint: "http://127.0.0.1:11434/v1/chat/completions",
@@ -96,6 +96,33 @@ public enum LLMPresets {
         let digest = SHA256.hash(data: Data(norm.utf8))
         let hex = digest.prefix(6).map { String(format: "%02x", $0) }.joined()
         return "llm_api_key.custom_" + hex
+    }
+
+    /// 제공사가 내린(폐기한) 모델 → 같은 제공사의 대체 모델.
+    /// 저장된 설정에 옛 모델명이 남아 있으면 후처리가 매번 404로 실패하고 원문만 붙는다.
+    /// 확인 근거(2026-10-03): deepseek-chat/reasoner 2026-07-24 폐기, Groq llama-3.1-8b-instant
+    /// 2026-08-16 폐기, gemini-2.5-flash-lite 2026-10-16 종료.
+    static let retiredModels: [(endpointHost: String, retired: String, replacement: String)] = [
+        ("api.deepseek.com", "deepseek-chat", "deepseek-v4-flash"),
+        ("api.deepseek.com", "deepseek-reasoner", "deepseek-v4-flash"),
+        ("api.groq.com", "llama-3.1-8b-instant", "openai/gpt-oss-20b"),
+        ("generativelanguage.googleapis.com", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"),
+        ("openrouter.ai", "google/gemini-2.5-flash-lite", "google/gemini-3.1-flash-lite"),
+    ]
+
+    /// 폐기된 모델명이면 대체 모델명을, 아니면 그대로 돌려준다.
+    public static func migratedModel(endpoint: String, model: String) -> String {
+        let ep = normalize(endpoint)
+        let m = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        for r in retiredModels where ep.contains(r.endpointHost) && m == r.retired {
+            return r.replacement
+        }
+        return model
+    }
+
+    /// DeepSeek V4는 기본이 thinking 모드라 한 줄 교정에도 5~15초가 걸린다. 받아쓰기에선 끈다.
+    public static func isDeepSeek(_ endpoint: String) -> Bool {
+        normalize(endpoint).contains("api.deepseek.com")
     }
 
     /// 구버전 단일 키 계정 (프로바이더 분리 이전). 마이그레이션 소스로만 사용.

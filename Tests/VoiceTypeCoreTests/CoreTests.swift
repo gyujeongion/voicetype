@@ -181,9 +181,52 @@ final class LLMPresetTests: XCTestCase {
         let p = LLMPresets.match(endpoint: "https://my.local/v1/chat/completions")
         XCTAssertTrue(p.isCustom)
     }
-    func testDefaultLLMIsDeepSeekChat() {
-        XCTAssertEqual(LLMConfig().model, "deepseek-chat")
-        XCTAssertTrue(LLMConfig().endpoint.contains("deepseek"))
+    func testDefaultLLMIsGeminiFlashLite() {
+        XCTAssertEqual(LLMConfig().model, "gemini-3.1-flash-lite")
+        XCTAssertEqual(LLMPresets.match(endpoint: LLMConfig().endpoint).name, "Gemini")
+    }
+
+    /// 프리셋 기본 모델 중 어느 것도 이미 폐기된 모델이 아니어야 한다.
+    func testNoPresetDefaultsToRetiredModel() {
+        for p in LLMPresets.all where !p.isCustom {
+            XCTAssertEqual(LLMPresets.migratedModel(endpoint: p.endpoint, model: p.defaultModel),
+                           p.defaultModel, "\(p.name) 기본 모델이 폐기 목록에 있음")
+        }
+        XCTAssertEqual(LLMPresets.migratedModel(endpoint: LLMConfig().endpoint, model: LLMConfig().model),
+                       LLMConfig().model)
+    }
+
+    func testRetiredModelsMigrate() {
+        let ds = "https://api.deepseek.com/v1/chat/completions"
+        XCTAssertEqual(LLMPresets.migratedModel(endpoint: ds, model: "deepseek-chat"), "deepseek-v4-flash")
+        XCTAssertEqual(LLMPresets.migratedModel(endpoint: ds, model: "deepseek-reasoner"), "deepseek-v4-flash")
+        XCTAssertEqual(LLMPresets.migratedModel(endpoint: "https://api.groq.com/openai/v1/chat/completions",
+                                                model: "llama-3.1-8b-instant"), "openai/gpt-oss-20b")
+        XCTAssertEqual(LLMPresets.migratedModel(
+            endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            model: "gemini-2.5-flash-lite"), "gemini-3.1-flash-lite")
+        // 다른 제공사의 같은 이름·현행 모델은 건드리지 않는다
+        XCTAssertEqual(LLMPresets.migratedModel(endpoint: "https://api.openai.com/v1/chat/completions",
+                                                model: "deepseek-chat"), "deepseek-chat")
+        XCTAssertEqual(LLMPresets.migratedModel(
+            endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            model: "gemini-3.1-flash-lite"), "gemini-3.1-flash-lite")
+    }
+
+    func testSavedSettingsWithRetiredModelAreMigratedOnLoad() throws {
+        let json = #"{"llm":{"endpoint":"https://api.deepseek.com/v1/chat/completions","model":"deepseek-chat","temperature":0.3}}"#
+        let s = try XCTUnwrap(AppSettings.decoded(from: Data(json.utf8)))
+        XCTAssertEqual(s.llm.model, "deepseek-v4-flash")
+        XCTAssertEqual(s.llm.endpoint, "https://api.deepseek.com/v1/chat/completions")
+    }
+
+    /// DeepSeek V4는 thinking 모드가 기본이라 끄는 파라미터를 붙이고, 다른 제공사엔 붙이지 않는다.
+    func testThinkingDisabledOnlyForDeepSeek() {
+        let ds = LLMConfig(endpoint: "https://api.deepseek.com/v1/chat/completions", model: "deepseek-v4-flash")
+        let body = PromptBuilder.requestBody(transcript: "x", instruction: "", glossary: [], config: ds)
+        XCTAssertEqual((body["thinking"] as? [String: String])?["type"], "disabled")
+        let gm = PromptBuilder.requestBody(transcript: "x", instruction: "", glossary: [], config: LLMConfig())
+        XCTAssertNil(gm["thinking"])
     }
     func testOllamaDoesNotRequireAPIKey() {
         let p = LLMPresets.match(endpoint: "http://127.0.0.1:11434/v1/chat/completions")
