@@ -25,6 +25,10 @@ final class SettingsViewModel: ObservableObject {
     @Published var devices: [AudioInputDevice] = []
     /// 단축키 캡처 중인 프로파일 id (nil이면 캡처 안 함)
     @Published var capturingProfileID: UUID?
+    /// 프로파일별 단축키 지정 거부 사유 (충돌·타자 가로채기). 다음 지정 성공 때 지워진다.
+    @Published var hotkeyMessages: [UUID: String] = [:]
+    /// 시스템·다른 앱이 이미 잡고 있어 등록에 실패한 단축키 id (프로파일 인덱스 또는 녹음 id). AppDelegate가 채운다.
+    @Published var failedHotkeyIDs: Set<UInt32> = []
 
     /// 프로파일/단축키 변경 시 핫키 재등록 콜백 (AppDelegate가 연결)
     var onProfilesChange: (() -> Void)?
@@ -121,7 +125,13 @@ final class SettingsViewModel: ObservableObject {
     }
 
     private func persist() {
-        SettingsStore.shared.update { $0 = settings }
+        // appLanguage는 LocalizationManager가 SettingsStore에 직접 쓴다. vm의 사본(설정창을 처음 열 때 값)으로
+        // 통째 덮어쓰면, 언어를 바꾼 뒤 다른 설정을 하나만 건드려도 언어가 예전 값으로 되돌아간다.
+        let currentLanguage = SettingsStore.shared.settings.appLanguage
+        SettingsStore.shared.update {
+            $0 = settings
+            $0.appLanguage = currentLanguage
+        }
         onProfilesChange?()   // 단축키 재등록 (저렴)
     }
 
@@ -374,8 +384,33 @@ final class SettingsViewModel: ObservableObject {
 
     func applyHotkey(keyCode: UInt32, modifiers: UInt32, for id: UUID) {
         guard let idx = settings.profiles.firstIndex(where: { $0.id == id }) else { return }
+        stopCapturingHotkey()
+        if let reason = hotkeyProblem(keyCode: keyCode, modifiers: modifiers, profileID: id, isRecording: false) {
+            hotkeyMessages[id] = reason
+            return
+        }
+        hotkeyMessages[id] = nil
         settings.profiles[idx].hotkeyKeyCode = keyCode
         settings.profiles[idx].hotkeyModifiers = modifiers
-        stopCapturingHotkey()
+    }
+
+    /// 단축키를 지정할 수 없는 사유 (타자 가로채기·다른 프로파일/녹음과 중복). 없으면 nil.
+    func hotkeyProblem(keyCode: UInt32, modifiers: UInt32, profileID: UUID?, isRecording: Bool) -> String? {
+        if let reason = HotkeyRules.rejectionReason(keyCode: keyCode, modifiers: modifiers) { return reason }
+        let recordingName = LocalizationManager.shared.text("recorder.name")
+        if let owner = HotkeyRules.conflictOwner(keyCode: keyCode, modifiers: modifiers, in: settings,
+                                                 excludingProfileID: profileID,
+                                                 excludingRecording: isRecording,
+                                                 recordingName: recordingName) {
+            return String(format: LocalizationManager.shared.text("hotkey.conflict"),
+                          KeyNames.display(keyCode: keyCode, modifiers: modifiers), owner)
+        }
+        return nil
+    }
+
+    /// 이 프로파일 단축키가 시스템·다른 앱과 겹쳐 등록에 실패했는지
+    func hotkeyRegistrationFailed(for profileID: UUID) -> Bool {
+        guard let idx = settings.profiles.firstIndex(where: { $0.id == profileID }) else { return false }
+        return failedHotkeyIDs.contains(UInt32(idx))
     }
 }

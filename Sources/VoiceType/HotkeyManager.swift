@@ -47,20 +47,56 @@ final class HotkeyManager: @unchecked Sendable {
         }
     }
 
+    /// 마지막 registerAll에서 등록에 실패한 id들. 다른 앱·시스템이 같은 조합을 이미 잡고 있으면
+    /// RegisterEventHotKey가 실패하는데, 예전엔 조용히 무시돼 "단축키가 안 먹는다"로만 보였다.
+    private(set) var failedIDs: Set<UInt32> = []
+
     /// 프로파일 단축키 일괄 (재)등록. keys = [(id, keyCode, modifiers)]
-    func registerAll(_ keys: [(id: UInt32, keyCode: UInt32, modifiers: UInt32)]) {
-        unregisterAll()
+    @discardableResult
+    func registerAll(_ keys: [(id: UInt32, keyCode: UInt32, modifiers: UInt32)]) -> Set<UInt32> {
+        unregisterPersistent()
+        var failed: Set<UInt32> = []
         for k in keys where k.keyCode != 0 {   // keyCode 0 = 미지정 → 등록 안 함
-            var ref: EventHotKeyRef?
-            let hkID = EventHotKeyID(signature: signature, id: k.id)
-            let status = RegisterEventHotKey(k.keyCode, k.modifiers, hkID, GetEventDispatcherTarget(), 0, &ref)
-            if status == noErr, let ref = ref { hotKeyRefs[k.id] = ref }
+            if let ref = register(id: k.id, keyCode: k.keyCode, modifiers: k.modifiers) {
+                hotKeyRefs[k.id] = ref
+            } else {
+                failed.insert(k.id)
+            }
         }
+        failedIDs = failed
+        return failed
+    }
+
+    /// 녹음 중에만 잠깐 잡는 단축키(Esc 취소 등). 영구 등록과 따로 관리한다.
+    private var temporaryRefs: [UInt32: EventHotKeyRef] = [:]
+
+    func registerTemporary(id: UInt32, keyCode: UInt32, modifiers: UInt32) {
+        guard temporaryRefs[id] == nil,
+              let ref = register(id: id, keyCode: keyCode, modifiers: modifiers) else { return }
+        temporaryRefs[id] = ref
+    }
+
+    func unregisterTemporary(id: UInt32) {
+        guard let ref = temporaryRefs.removeValue(forKey: id) else { return }
+        UnregisterEventHotKey(ref)
+    }
+
+    private func register(id: UInt32, keyCode: UInt32, modifiers: UInt32) -> EventHotKeyRef? {
+        var ref: EventHotKeyRef?
+        let hkID = EventHotKeyID(signature: signature, id: id)
+        let status = RegisterEventHotKey(keyCode, modifiers, hkID, GetEventDispatcherTarget(), 0, &ref)
+        return status == noErr ? ref : nil
+    }
+
+    private func unregisterPersistent() {
+        for (_, ref) in hotKeyRefs { UnregisterEventHotKey(ref) }
+        hotKeyRefs.removeAll()
     }
 
     func unregisterAll() {
-        for (_, ref) in hotKeyRefs { UnregisterEventHotKey(ref) }
-        hotKeyRefs.removeAll()
+        unregisterPersistent()
+        for (_, ref) in temporaryRefs { UnregisterEventHotKey(ref) }
+        temporaryRefs.removeAll()
     }
 }
 

@@ -669,6 +669,14 @@ private struct ProfileCard: View {
                 .buttonStyle(.borderless)
             }
 
+            if let message = vm.hotkeyMessages[profile.id] {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(.orange)
+            } else if vm.hotkeyRegistrationFailed(for: profile.id) {
+                Label(t("hotkey.registration.failed"), systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+
             if profile.useLLM {
                 TextEditor(text: $profile.instruction)
                     .frame(height: 70)

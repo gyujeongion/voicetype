@@ -329,7 +329,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         keys.append((id: Self.recordingHotkeyID,
                      keyCode: s.recordingHotkeyKeyCode,
                      modifiers: s.recordingHotkeyModifiers))
-        hotkey.registerAll(keys)
+        let failed = hotkey.registerAll(keys)
+        // 매 설정 변경마다 불리므로 값이 바뀔 때만 발행 (불필요한 SwiftUI 재그리기 방지)
+        if settingsVM.failedHotkeyIDs != failed { settingsVM.failedHotkeyIDs = failed }
     }
 
     private func spaceBarProfile() -> PromptProfile? {

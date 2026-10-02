@@ -489,3 +489,78 @@ final class RecordingSettingsTests: XCTestCase {
         XCTAssertEqual(back.recordingFolderPath, "/tmp/rec")
     }
 }
+
+final class HotkeyConflictTests: XCTestCase {
+    private func settings() -> AppSettings {
+        var s = AppSettings()
+        s.profiles = [
+            PromptProfile(name: "받아쓰기", hotkeyKeyCode: 100),            // F8
+            PromptProfile(name: "영어 번역", hotkeyKeyCode: 98),            // F7
+        ]
+        s.recordingHotkeyKeyCode = 96   // F5
+        return s
+    }
+
+    func testDuplicateOfAnotherProfileIsReported() {
+        let s = settings()
+        let translateID = s.profiles[1].id
+        XCTAssertEqual(HotkeyRules.conflictOwner(keyCode: 100, modifiers: 0, in: s,
+                                                 excludingProfileID: translateID), "받아쓰기")
+    }
+
+    func testSameProfileReassigningItsOwnKeyIsNotAConflict() {
+        let s = settings()
+        XCTAssertNil(HotkeyRules.conflictOwner(keyCode: 100, modifiers: 0, in: s,
+                                               excludingProfileID: s.profiles[0].id))
+    }
+
+    func testProfileCannotTakeRecordingHotkey() {
+        let s = settings()
+        XCTAssertEqual(HotkeyRules.conflictOwner(keyCode: 96, modifiers: 0, in: s,
+                                                 excludingProfileID: s.profiles[0].id,
+                                                 recordingName: "F5 녹음"), "F5 녹음")
+    }
+
+    func testRecordingHotkeyCannotTakeProfileKey() {
+        let s = settings()
+        XCTAssertEqual(HotkeyRules.conflictOwner(keyCode: 98, modifiers: 0, in: s,
+                                                 excludingRecording: true), "영어 번역")
+        XCTAssertNil(HotkeyRules.conflictOwner(keyCode: 96, modifiers: 0, in: s, excludingRecording: true))
+    }
+
+    func testModifiersDistinguishCombos() {
+        let s = settings()
+        XCTAssertNil(HotkeyRules.conflictOwner(keyCode: 100, modifiers: 2048, in: s))   // ⌥F8 ≠ F8
+    }
+
+    func testUnassignedNeverConflicts() {
+        var s = settings()
+        s.profiles.append(PromptProfile(name: "빈 프로파일", hotkeyKeyCode: 0))
+        XCTAssertNil(HotkeyRules.conflictOwner(keyCode: 0, modifiers: 0, in: s))
+    }
+
+    func testBareLetterOrSpaceIsRejected() {
+        XCTAssertNotNil(HotkeyRules.rejectionReason(keyCode: 0, modifiers: 0))     // A
+        XCTAssertNotNil(HotkeyRules.rejectionReason(keyCode: 49, modifiers: 0))    // Space
+        XCTAssertNotNil(HotkeyRules.rejectionReason(keyCode: 49, modifiers: 512))  // ⇧Space = 사실상 타자
+        XCTAssertNotNil(HotkeyRules.rejectionReason(keyCode: 53, modifiers: 0))    // Esc (취소 전용)
+    }
+
+    func testFunctionKeysAndModifierCombosAreAllowed() {
+        XCTAssertNil(HotkeyRules.rejectionReason(keyCode: 100, modifiers: 0))      // F8
+        XCTAssertNil(HotkeyRules.rejectionReason(keyCode: 96, modifiers: 0))       // F5
+        XCTAssertNil(HotkeyRules.rejectionReason(keyCode: 49, modifiers: 2048))    // ⌥Space (기본 프로파일)
+        XCTAssertNil(HotkeyRules.rejectionReason(keyCode: 49, modifiers: 2560))    // ⌥⇧Space
+    }
+
+    /// 기본 프로파일 단축키는 규칙을 통과하고 서로·녹음과 겹치지 않아야 한다.
+    func testDefaultsAreValid() {
+        let s = AppSettings()
+        for p in s.profiles {
+            XCTAssertNil(HotkeyRules.rejectionReason(keyCode: p.hotkeyKeyCode, modifiers: p.hotkeyModifiers), p.name)
+            XCTAssertNil(HotkeyRules.conflictOwner(keyCode: p.hotkeyKeyCode, modifiers: p.hotkeyModifiers,
+                                                   in: s, excludingProfileID: p.id), p.name)
+        }
+        XCTAssertNil(HotkeyRules.rejectionReason(keyCode: s.recordingHotkeyKeyCode, modifiers: s.recordingHotkeyModifiers))
+    }
+}

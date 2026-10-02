@@ -24,6 +24,9 @@
 "alert.open_system_settings" = "Open System Settings";
 "alert.open_settings" = "Open Settings";
 "alert.later" = "Later";
+"recorder.name" = "F5 Recording";
+"hotkey.conflict" = "%@ is already used by '%@'.";
+"hotkey.registration.failed" = "Another app or macOS already uses this shortcut, so it couldn't be registered. Pick a different one.";
 "indicator.recording" = "Recording";
 "indicator.processing" = "Transcribing…";
 "indicator.section" = "Recording indicator";
