@@ -183,6 +183,16 @@
 "history.unpasted" = "미붙여넣기";
 "history.saveRecordings" = "원본 오디오 저장 (m4a, 30일 후 자동 삭제)";
 "history.playAudio" = "오디오 보기";
+"history.play" = "재생";
+"history.stop" = "정지";
+"history.play.failed" = "오디오를 재생할 수 없습니다. 파일이 옮겨졌거나 지워졌을 수 있습니다.";
+"history.search" = "받아쓰기 기록 검색";
+"history.search.none" = "검색 결과가 없습니다.";
+"history.delete.all.confirm" = "받아쓰기 기록을 모두 지울까요?";
+"history.delete.all.message" = "텍스트와 함께 저장된 원본 오디오도 지워지며 되돌릴 수 없습니다. F5 녹음은 지워지지 않습니다.";
+"history.f5.delete.confirm" = "이 녹음을 휴지통으로 옮길까요?";
+"history.f5.delete.trash" = "휴지통으로 이동";
+"history.f5.delete.failed" = "휴지통으로 옮기지 못해 아무것도 지우지 않았습니다: %@";
 "history.f5.title" = "F5 녹음";
 "history.f5.empty" = "아직 F5 녹음이 없습니다.";
 "history.f5.mixed" = "마이크+시스템";

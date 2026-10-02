@@ -183,6 +183,16 @@
 "history.unpasted" = "not pasted";
 "history.saveRecordings" = "Save original audio (m4a, auto-deleted after 30 days)";
 "history.playAudio" = "Reveal audio";
+"history.play" = "Play";
+"history.stop" = "Stop";
+"history.play.failed" = "Couldn't play this audio. The file may have been moved or deleted.";
+"history.search" = "Search dictation history";
+"history.search.none" = "No matches.";
+"history.delete.all.confirm" = "Delete all dictation history?";
+"history.delete.all.message" = "Text and saved original audio will be deleted permanently. F5 recordings are not affected.";
+"history.f5.delete.confirm" = "Move this recording to the Trash?";
+"history.f5.delete.trash" = "Move to Trash";
+"history.f5.delete.failed" = "Couldn't move to Trash, nothing was deleted: %@";
 "history.f5.title" = "F5 Recordings";
 "history.f5.empty" = "No F5 recordings yet.";
 "history.f5.mixed" = "Mic + System";

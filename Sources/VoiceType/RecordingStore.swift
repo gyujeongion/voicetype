@@ -57,10 +57,17 @@ final class RecordingStore: ObservableObject {
         }.sorted { $0.session.startedAt > $1.session.startedAt }
     }
 
-    /// 회차 폴더 전체를 삭제한다.
-    func delete(_ entry: Entry) {
-        try? fm.removeItem(at: entry.folder)
-        refresh()
+    /// 회차 폴더를 휴지통으로 옮긴다. 회의 녹음은 되돌릴 수 없으면 안 되므로 영구 삭제하지 않는다.
+    /// 휴지통이 없는 볼륨(일부 네트워크 드라이브)이면 실패 사유를 돌려주고 아무것도 지우지 않는다.
+    @discardableResult
+    func moveToTrash(_ entry: Entry) -> String? {
+        defer { refresh() }
+        do {
+            try fm.trashItem(at: entry.folder, resultingItemURL: nil)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
     }
 
     static var defaultRoot: URL {

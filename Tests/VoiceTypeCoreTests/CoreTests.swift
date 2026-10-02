@@ -564,3 +564,29 @@ final class HotkeyConflictTests: XCTestCase {
         XCTAssertNil(HotkeyRules.rejectionReason(keyCode: s.recordingHotkeyKeyCode, modifiers: s.recordingHotkeyModifiers))
     }
 }
+
+final class HistoryFilterTests: XCTestCase {
+    private func entry(_ final: String, raw: String? = nil, profile: String = "받아쓰기") -> HistoryEntry {
+        HistoryEntry(timestamp: Date(), profileName: profile, rawTranscript: raw ?? final,
+                     finalText: final, autoPasted: true)
+    }
+
+    func testEmptyQueryKeepsEverything() {
+        let es = [entry("a"), entry("b")]
+        XCTAssertEqual(HistoryFilter.filter(es, query: "   ").count, 2)
+    }
+
+    func testAllTermsMustMatch() {
+        let es = [entry("내일 미팅 3시"), entry("내일 점심")]
+        XCTAssertEqual(HistoryFilter.filter(es, query: "내일 미팅").map(\.finalText), ["내일 미팅 3시"])
+    }
+
+    func testCaseInsensitiveAndSearchesRawTranscript() {
+        // 번역 프로파일: 최종본은 영어, 원문은 한국어 — 둘 다로 찾을 수 있어야 한다
+        let e = entry("See you Tomorrow", raw: "내일 봐", profile: "영어 번역")
+        XCTAssertTrue(HistoryFilter.matches(e, query: "tomorrow"))
+        XCTAssertTrue(HistoryFilter.matches(e, query: "내일"))
+        XCTAssertTrue(HistoryFilter.matches(e, query: "영어"))
+        XCTAssertFalse(HistoryFilter.matches(e, query: "모레"))
+    }
+}

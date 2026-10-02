@@ -603,51 +603,95 @@ struct SettingsView: View {
 
     // MARK: - 히스토리
 
+    @State private var historyQuery = ""
+    @State private var confirmClearHistory = false
+    @State private var recordingPendingDelete: RecordingStore.Entry?
+    @State private var recordingDeleteError: String?
+    @ObservedObject private var player = AudioPreviewPlayer.shared
+
     private var historyTab: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Toggle(t("history.saveRecordings"), isOn: $vm.settings.saveRecordings)
-                .toggleStyle(.switch)
-                .padding(.horizontal)
-                .padding(.top, 4)
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField(t("history.search"), text: $historyQuery)
+                        .textFieldStyle(.plain)
+                    if !historyQuery.isEmpty {
+                        Button { historyQuery = "" } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                .padding(6)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.1)))
+                Toggle(t("history.saveRecordings"), isOn: $vm.settings.saveRecordings)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .font(.caption)
+            }
+            .padding(.horizontal)
+            .padding(.top, 4)
+
+            if let err = player.errorMessage {
+                Text(err).font(.caption).foregroundStyle(.orange).padding(.horizontal)
+            }
 
             List {
-                Section {
-                    if recordings.entries.isEmpty {
-                        Text(t("history.f5.empty"))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(recordings.entries) { entry in
-                            RecordingRow(entry: entry,
-                                        onReveal: {
-                                            NSWorkspace.shared.activateFileViewerSelecting([entry.folder])
-                                        },
-                                        onCopyPath: {
-                                            if let url = entry.primaryAudioURL {
-                                                TextInjector.copyToClipboard(url.path)
-                                            }
-                                        },
-                                        onDelete: { recordings.delete(entry) })
+                // 녹음에는 텍스트가 없어 검색 대상이 아니다 — 검색 중엔 받아쓰기 결과만 보여준다
+                if historyQuery.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Section {
+                        if recordings.entries.isEmpty {
+                            Text(t("history.f5.empty"))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(recordings.entries) { entry in
+                                RecordingRow(entry: entry,
+                                             isPlaying: player.isPlaying(entry.primaryAudioURL),
+                                             onPlay: {
+                                                 if let url = entry.primaryAudioURL { player.toggle(url) }
+                                             },
+                                             onReveal: {
+                                                 NSWorkspace.shared.activateFileViewerSelecting([entry.primaryAudioURL ?? entry.folder])
+                                             },
+                                             onCopyPath: {
+                                                 if let url = entry.primaryAudioURL {
+                                                     TextInjector.copyToClipboard(url.path)
+                                                 }
+                                             },
+                                             onDelete: { recordingPendingDelete = entry })
+                            }
                         }
-                    }
-                } header: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(t("history.f5.title")).font(.headline)
-                        Text(t("history.f5.note")).font(.caption2).foregroundStyle(.secondary)
+                        if let err = recordingDeleteError {
+                            Text(err).font(.caption).foregroundStyle(.orange)
+                        }
+                    } header: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(t("history.f5.title")).font(.headline)
+                            Text(t("history.f5.note")).font(.caption2).foregroundStyle(.secondary)
+                        }
                     }
                 }
 
                 Section {
-                    if history.entries.isEmpty {
-                        Text(t("history.empty"))
+                    let visible = HistoryFilter.filter(history.entries, query: historyQuery)
+                    if visible.isEmpty {
+                        Text(history.entries.isEmpty ? t("history.empty") : t("history.search.none"))
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(history.entries) { entry in
+                        ForEach(visible) { entry in
+                            let audioURL = history.audioURL(for: entry)
                             HistoryRow(entry: entry,
+                                       isPlaying: player.isPlaying(audioURL),
                                        onCopy: { TextInjector.copyToClipboard(entry.finalText) },
-                                       onDelete: { history.delete(entry.id) },
+                                       onDelete: {
+                                           if player.isPlaying(audioURL) { player.stop() }
+                                           history.delete(entry.id)
+                                       },
+                                       onPlay: { if let audioURL { player.toggle(audioURL) } },
                                        onRevealAudio: {
-                                           if let url = history.audioURL(for: entry) {
-                                               NSWorkspace.shared.activateFileViewerSelecting([url])
+                                           if let audioURL {
+                                               NSWorkspace.shared.activateFileViewerSelecting([audioURL])
                                            }
                                        })
                         }
@@ -657,7 +701,7 @@ struct SettingsView: View {
                         Text(t("history.title")).font(.headline)
                         Spacer()
                         if !history.entries.isEmpty {
-                            Button(t("history.delete.all"), role: .destructive) { history.clear() }
+                            Button(t("history.delete.all"), role: .destructive) { confirmClearHistory = true }
                                 .font(.caption)
                         }
                     }
@@ -665,6 +709,32 @@ struct SettingsView: View {
             }
         }
         .onAppear { recordings.refresh() }
+        .onDisappear { player.stop() }
+        .confirmationDialog(t("history.delete.all.confirm"), isPresented: $confirmClearHistory) {
+            Button(t("history.delete.all"), role: .destructive) {
+                player.stop()
+                history.clear()
+            }
+        } message: {
+            Text(t("history.delete.all.message"))
+        }
+        .confirmationDialog(t("history.f5.delete.confirm"),
+                            isPresented: Binding(get: { recordingPendingDelete != nil },
+                                                 set: { if !$0 { recordingPendingDelete = nil } })) {
+            Button(t("history.f5.delete.trash"), role: .destructive) {
+                if let entry = recordingPendingDelete {
+                    if player.isPlaying(entry.primaryAudioURL) { player.stop() }
+                    recordingDeleteError = recordings.moveToTrash(entry).map {
+                        String(format: t("history.f5.delete.failed"), $0)
+                    }
+                }
+                recordingPendingDelete = nil
+            }
+        } message: {
+            if let entry = recordingPendingDelete {
+                Text(entry.session.startedAt, format: .dateTime.month().day().hour().minute())
+            }
+        }
     }
 }
 
@@ -752,8 +822,10 @@ private struct ProfileCard: View {
 
 private struct HistoryRow: View {
     let entry: HistoryEntry
+    var isPlaying: Bool = false
     let onCopy: () -> Void
     let onDelete: () -> Void
+    var onPlay: () -> Void = {}
     let onRevealAudio: () -> Void
     @EnvironmentObject var localization: LocalizationManager
     @State private var showRaw = false
@@ -798,15 +870,23 @@ private struct HistoryRow: View {
             }
 
             HStack {
-                Button { onCopy(); copied = true } label: {
+                Button {
+                    onCopy()
+                    copied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+                } label: {
                     Label(copied ? t("history.copied") : t("history.copy"), systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
                 .font(.caption).buttonStyle(.bordered).controlSize(.small)
                 if entry.audioFileName != nil {
-                    Button { onRevealAudio() } label: {
-                        Label(t("history.playAudio"), systemImage: "waveform")
+                    Button { onPlay() } label: {
+                        Label(isPlaying ? t("history.stop") : t("history.play"),
+                              systemImage: isPlaying ? "stop.fill" : "play.fill")
                     }
                     .font(.caption).buttonStyle(.bordered).controlSize(.small)
+                    Button { onRevealAudio() } label: { Image(systemName: "folder") }
+                        .buttonStyle(.borderless)
+                        .help(t("history.f5.reveal"))
                 }
                 Spacer()
                 Button(role: .destructive) { onDelete() } label: {
@@ -823,6 +903,8 @@ private struct HistoryRow: View {
 /// 병합 실패 시 폴백으로 mic+system이 개별 트랙으로 같이 들어올 수도 있다.
 private struct RecordingRow: View {
     let entry: RecordingStore.Entry
+    var isPlaying: Bool = false
+    var onPlay: () -> Void = {}
     let onReveal: () -> Void
     let onCopyPath: () -> Void
     let onDelete: () -> Void
@@ -855,14 +937,20 @@ private struct RecordingRow: View {
                     .font(.caption2).foregroundStyle(.secondary)
             }
             Spacer()
+            if entry.primaryAudioURL != nil {
+                Button { onPlay() } label: {
+                    Label(isPlaying ? t("history.stop") : t("history.play"),
+                          systemImage: isPlaying ? "stop.fill" : "play.fill")
+                }
+                .font(.caption).buttonStyle(.bordered).controlSize(.small)
+            }
             Button { onCopyPath() } label: {
                 Label(t("history.f5.copyPath"), systemImage: "doc.on.doc")
             }
             .font(.caption).buttonStyle(.bordered).controlSize(.small)
-            Button { onReveal() } label: {
-                Label(t("history.f5.reveal"), systemImage: "folder")
-            }
-            .font(.caption).buttonStyle(.bordered).controlSize(.small)
+            Button { onReveal() } label: { Image(systemName: "folder") }
+                .buttonStyle(.borderless)
+                .help(t("history.f5.reveal"))
             Button(role: .destructive) { onDelete() } label: {
                 Image(systemName: "trash")
             }
