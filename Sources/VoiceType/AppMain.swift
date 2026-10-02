@@ -31,6 +31,13 @@ enum AppMain {
             return
         }
 
+        // 토스트 알림 헤드리스 렌더 (픽셀 검증). --render-toast <출력폴더>
+        if let idx = args.firstIndex(of: "--render-toast"), idx + 1 < args.count {
+            let written = ToastRenderer.renderAll(to: args[idx + 1])
+            written.forEach { print($0) }
+            exit(written.isEmpty ? 1 : 0)
+        }
+
         // 마이크 녹음 실측 (GUI 없이 캡처 파이프라인 검증). --record-audio [초] (기본 10)
         if let idx = args.firstIndex(of: "--record-audio") {
             let seconds = (idx + 1 < args.count ? Double(args[idx + 1]) : nil) ?? 10

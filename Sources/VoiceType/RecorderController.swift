@@ -32,6 +32,8 @@ final class RecorderController {
 
     var onStateChange: ((State) -> Void)?
     var onError: ((String) -> Void)?
+    /// 사용자가 설정을 바꿔야만 풀리는 문제 (권한) — 해결 버튼이 달린 창으로 보여준다
+    var onActionNeeded: ((UserActionNeeded) -> Void)?
     var onMicLevel: ((Float) -> Void)?
     var onSystemLevel: ((Float) -> Void)?
     /// 완료된 회차 폴더
@@ -73,7 +75,7 @@ final class RecorderController {
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 guard ok else {
-                    self.onError?("마이크 권한이 거부되었습니다.\n시스템 설정 > 개인정보 보호 및 보안 > 마이크에서 VoiceType을 허용하세요.")
+                    self.onActionNeeded?(.microphoneDenied)
                     self.setState(.idle)
                     return
                 }

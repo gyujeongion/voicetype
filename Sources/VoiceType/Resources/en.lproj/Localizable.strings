@@ -21,6 +21,9 @@
 "menu.quit" = "Quit VoiceType";
 "alert.ok" = "OK";
 "alert.copy_diagnostics" = "Copy Diagnostics";
+"alert.open_system_settings" = "Open System Settings";
+"alert.open_settings" = "Open Settings";
+"alert.later" = "Later";
 "indicator.recording" = "Recording";
 "indicator.processing" = "Transcribing…";
 "indicator.section" = "Recording indicator";

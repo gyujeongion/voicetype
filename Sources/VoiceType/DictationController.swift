@@ -32,6 +32,8 @@ final class DictationController {
     var onError: ((String) -> Void)?
     /// 흐름은 계속되지만 사용자가 알아야 하는 일(후처리 실패 등) — 비차단 알림용
     var onNotice: ((String) -> Void)?
+    /// 사용자가 설정을 바꿔야만 풀리는 문제 (권한·키) — 해결 버튼이 달린 창으로 보여준다
+    var onActionNeeded: ((UserActionNeeded) -> Void)?
     /// 마이크 입력 레벨(RMS 0~1) — 인디케이터 레벨미터용
     var onLevel: ((Float) -> Void)?
 
@@ -60,7 +62,7 @@ final class DictationController {
         let store = SettingsStore.shared
         let provider = store.settings.stt.provider
         guard let apiKey = store.sttAPIKey(for: provider), !apiKey.isEmpty else {
-            onError?("\(STTPresets.name(for: provider)) API 키가 설정되지 않았습니다. 설정 > 일반에서 키를 입력하세요.")
+            onActionNeeded?(.sttKeyMissing(providerName: STTPresets.name(for: provider)))
             setState(.idle)
             return
         }
@@ -71,7 +73,7 @@ final class DictationController {
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 guard ok else {
-                    self.onError?("마이크 권한이 거부되었습니다. 시스템 설정 > 개인정보 보호 > 마이크에서 허용하세요.")
+                    self.onActionNeeded?(.microphoneDenied)
                     self.setState(.idle)
                     return
                 }
@@ -192,14 +194,15 @@ final class DictationController {
                                                  expectedAppBundleID: expectedApp,
                                                  onSkippedDueToAppSwitch: { [weak self] in
                     Task { @MainActor in
-                        self?.onError?("결과를 처리하는 동안 다른 앱으로 전환돼 자동 붙여넣기를 건너뛰었습니다. 클립보드에 복사돼 있습니다 — Cmd+V로 붙여넣으세요.")
+                        self?.onNotice?("결과를 처리하는 동안 다른 앱으로 전환돼 자동 붙여넣기를 건너뛰었습니다. 클립보드에 복사돼 있습니다 — Cmd+V로 붙여넣으세요.")
                     }
                 })
                 // autoPaste인데 권한이 없어 못 붙인 경우 1회 안내 + 시스템 설정 유도
                 if settings.autoPaste && !pasted && !TextInjector.hasAccessibility() && !Self.accessibilityWarned {
                     Self.accessibilityWarned = true
+                    // 시스템이 "시스템 설정 열기" 버튼 달린 권한 창을 직접 띄운다 — 우리 쪽은 토스트로 상황만 알린다
                     TextInjector.promptAccessibility()
-                    self.onError?("자동 붙여넣기엔 '손쉬운 사용(Accessibility)' 권한이 필요합니다.\n시스템 설정 > 개인정보 보호 및 보안 > 손쉬운 사용에서 VoiceType을 켠 뒤 앱을 다시 실행하세요.\n(지금은 클립보드에 복사됨 — Cmd+V로 붙여넣으세요)")
+                    self.onNotice?("자동 붙여넣기엔 '손쉬운 사용' 권한이 필요합니다. 켠 뒤 앱을 다시 실행하세요.\n지금 결과는 클립보드에 있습니다 — Cmd+V로 붙여넣으세요.")
                 }
             }
             // 히스토리 기록 (원문 + 최종본 + 원본 오디오)

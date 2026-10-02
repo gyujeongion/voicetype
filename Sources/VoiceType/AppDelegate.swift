@@ -36,7 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupSpaceTrigger()
         Task { @MainActor in
             let n = await self.recorder.recoverIncompleteSessions()
-            if n > 0 { self.notify(String(format: self.l.text("recorder.recovered"), n)) }
+            if n > 0 { self.notify(String(format: self.l.text("recorder.recovered"), n), kind: .info) }
         }
         SettingsStore.shared.onChange = { [weak self] _ in
             self?.refreshLocalizedUI()
@@ -140,6 +140,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dictation.onNotice = { [weak self] msg in
             self?.notify(msg)
         }
+        dictation.onActionNeeded = { [weak self] issue in
+            self?.indicator.hide()
+            self?.notifyActionable(issue)
+        }
         dictation.onInterim = { [weak self] text in
             self?.statusItem.button?.toolTip = text.isEmpty ? "VoiceType" : text
         }
@@ -175,6 +179,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         recorder.onError = { [weak self] msg in self?.notify(msg) }
+        recorder.onActionNeeded = { [weak self] issue in self?.notifyActionable(issue) }
         recorder.onMicLevel = { [weak self] level in self?.indicator.setLevel(level) }
         recorder.onSystemLevel = { [weak self] level in
             self?.indicator.setShowsSecondaryLevel(true)
@@ -183,7 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recorder.onFinished = { [weak self] _ in
             // Finder 자동 팝업 폐기(2026-08-17) — 설정 > 히스토리 탭에서 목록으로 확인,
             // 필요할 때만 버튼으로 Finder 연결. RecordingStore가 이미 갱신을 발행한다.
-            self?.notify(self?.l.text("recorder.finished.notify") ?? "녹음이 저장됐습니다.")
+            self?.notify(self?.l.text("recorder.finished.notify") ?? "녹음이 저장됐습니다.", kind: .info)
         }
     }
 
@@ -372,16 +377,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quit() { NSApp.terminate(nil) }
 
-    private func notify(_ message: String) {
-        Diagnostics.lastError = message
+    /// 비차단 알림. 경고는 진단 정보의 "마지막 에러"로도 남긴다.
+    private func notify(_ message: String, kind: ToastController.Kind = .warning) {
+        if kind == .warning { Diagnostics.lastError = message }
+        ToastController.shared.show(message, kind: kind)
+    }
+
+    /// 사용자가 무언가를 켜야만 풀리는 문제만 버튼 달린 창으로 띄운다.
+    private func notifyActionable(_ issue: UserActionNeeded) {
+        Diagnostics.lastError = issue.message
+        NSApp.activate(ignoringOtherApps: true)   // 메뉴바 앱이라 안 하면 창이 다른 앱 뒤에 뜬다
         let alert = NSAlert()
         alert.messageText = "VoiceType"
-        alert.informativeText = message
+        alert.informativeText = issue.message
         alert.alertStyle = .warning
-        alert.addButton(withTitle: l.text("alert.ok"))
-        alert.addButton(withTitle: l.text("alert.copy_diagnostics"))
-        if alert.runModal() == .alertSecondButtonReturn {
-            Diagnostics.copyToClipboard()
+        alert.addButton(withTitle: issue.systemSettingsURL == nil ? l.text("alert.open_settings") : l.text("alert.open_system_settings"))
+        alert.addButton(withTitle: l.text("alert.later"))
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        if let url = issue.systemSettingsURL {
+            NSWorkspace.shared.open(url)
+        } else {
+            openSettings()
         }
     }
 

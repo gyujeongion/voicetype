@@ -21,6 +21,9 @@
 "menu.quit" = "VoiceType 종료";
 "alert.ok" = "확인";
 "alert.copy_diagnostics" = "진단 정보 복사";
+"alert.open_system_settings" = "시스템 설정 열기";
+"alert.open_settings" = "설정 열기";
+"alert.later" = "나중에";
 "indicator.recording" = "녹음 중";
 "indicator.processing" = "받아쓰는 중…";
 "indicator.section" = "녹음 인디케이터";
