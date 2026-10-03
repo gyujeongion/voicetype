@@ -5,7 +5,7 @@ import VoiceTypeCore
 
 /// 첫 실행 온보딩 윈도우 관리.
 @MainActor
-final class OnboardingController {
+final class OnboardingController: NSObject, NSWindowDelegate {
     static let doneKey = "voicetype.onboarded.v1"
     static var isDone: Bool { UserDefaults.standard.bool(forKey: doneKey) }
     static func markDone() { UserDefaults.standard.set(true, forKey: doneKey) }
@@ -16,10 +16,7 @@ final class OnboardingController {
     func show() {
         let lm = LocalizationManager.shared
         let view = OnboardingView(onDone: { [weak self] in
-            OnboardingController.markDone()
-            self?.window?.close()
-            self?.window = nil
-            self?.onFinish?()
+            self?.finish()
         })
         .environment(\.locale, lm.activeLocale)
         .environmentObject(lm)
@@ -28,11 +25,29 @@ final class OnboardingController {
         win.title = lm.text("onboarding.window.title")
         win.styleMask = [.titled, .closable]
         win.isReleasedWhenClosed = false
+        win.delegate = self
         win.center()
         window = win
         NSApp.setActivationPolicy(.regular) // 온보딩 동안 Dock·창 포커스 허용
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
+    }
+}
+
+extension OnboardingController {
+    /// 마지막 단계의 시작 버튼. 창을 닫으면 windowWillClose가 이어서 정리한다.
+    fileprivate func finish() {
+        window?.close()
+    }
+
+    /// 마법사를 끝까지 안 가고 창의 ✕로 닫은 경우도 같은 정리를 한다 —
+    /// 안 하면 Dock 아이콘(.regular 정책)이 남고, 다음 실행에 마법사가 또 뜬다.
+    /// 키가 비어 있으면 다음 실행 때 설정창이 열려 키 입력으로 안내된다.
+    func windowWillClose(_ notification: Notification) {
+        guard window != nil else { return }
+        window = nil
+        OnboardingController.markDone()
+        onFinish?()
     }
 }
 

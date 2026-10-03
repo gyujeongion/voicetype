@@ -590,3 +590,21 @@ final class HistoryFilterTests: XCTestCase {
         XCTAssertFalse(HistoryFilter.matches(e, query: "모레"))
     }
 }
+
+final class STTPresetTests: XCTestCase {
+    /// custom provider 프리셋은 Soniox 프로토콜로만 접속한다 — 다른 프로토콜 업체를 넣으면 조용히 실패한다.
+    func testCustomPresetIsOnlyTheGenericSonioxCompatibleEntry() {
+        let customs = STTPresets.all.filter { $0.provider == .custom }
+        XCTAssertEqual(customs.map(\.name), ["Custom"])
+        XCTAssertNil(customs[0].customEndpoint)
+    }
+
+    func testNativeProvidersAreRecommended() {
+        XCTAssertEqual(Set(STTPresets.all.filter(\.isRecommended).map(\.provider)), [.deepgram, .soniox])
+    }
+
+    func testEveryPresetHasAUniqueName() {
+        let names = STTPresets.all.map(\.name)
+        XCTAssertEqual(names.count, Set(names).count)
+    }
+}

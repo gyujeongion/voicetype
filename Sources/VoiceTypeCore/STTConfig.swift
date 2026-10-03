@@ -38,7 +38,9 @@ public struct STTPreset: Identifiable, Sendable {
 }
 
 /// All known presets. Deepgram and Soniox are natively supported (full protocol integration).
-/// Others listed as Custom — require a compatible WebSocket endpoint to be configured.
+/// "Custom" speaks the Soniox WebSocket protocol only — other vendors (Gladia, AssemblyAI,
+/// Speechmatics, Rev.ai, Symbl) use different protocols and silently failed when listed here,
+/// so they were removed (2026-10-03).
 public enum STTPresets {
     public static let all: [STTPreset] = [
         // ── Natively supported ────────────────────────────────────────────────
@@ -50,28 +52,6 @@ public enum STTPresets {
                   provider: .soniox,
                   noteKey: "stt.preset.soniox.note",
                   isRecommended: true),
-
-        // ── Custom endpoint — real-time WebSocket supported ───────────────────
-        STTPreset(name: "Gladia",
-                  provider: .custom,
-                  noteKey: "stt.preset.gladia.note",
-                  customEndpoint: "wss://api.gladia.io/audio/text/audio-transcription"),
-        STTPreset(name: "AssemblyAI",
-                  provider: .custom,
-                  noteKey: "stt.preset.assemblyai.note",
-                  customEndpoint: "wss://api.assemblyai.com/v2/realtime/ws"),
-        STTPreset(name: "Speechmatics",
-                  provider: .custom,
-                  noteKey: "stt.preset.speechmatics.note",
-                  customEndpoint: "wss://eu2.rt.speechmatics.com/v1"),
-        STTPreset(name: "Rev.ai",
-                  provider: .custom,
-                  noteKey: "stt.preset.revai.note",
-                  customEndpoint: "wss://api.rev.ai/speechtotext/v1/stream"),
-        STTPreset(name: "Symbl.ai",
-                  provider: .custom,
-                  noteKey: "stt.preset.symbl.note",
-                  customEndpoint: "wss://api.symbl.ai/v1/realtime/insights"),
 
         // ── Fully custom ──────────────────────────────────────────────────────
         STTPreset(name: "Custom",

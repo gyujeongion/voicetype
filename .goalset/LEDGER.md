@@ -16,3 +16,4 @@ append-only 진행 로그. 모듈 완료·파킹·막힘·방향 전환마다 1�
 - 2026-10-03 21:16 [hook] ARM session=8360337a budget=8.0h
 - 2026-10-03 21:16 [resume] 사용자 '마저해' — M8부터 재개, 재arm
 - 2026-10-03 21:17 [M8] 메뉴바 동적 재구성(NSMenuDelegate): 프로파일별 받아쓰기+단축키 표기, 녹음 중엔 종료/취소, F5 시작/종료·폴더 열기, 마지막 결과 복사; dictation.stop()/cancel() 추가(꾹누르기 프로파일도 메뉴로 종료), 녹음·처리 중에만 Esc 임시 핫키로 취소(세션토큰 무효화+오디오 삭제+붙여넣기 없음) · gs_check M8 PASS (실동작은 M10 설치 후)
+- 2026-10-03 21:17 [M9] 동작 불가 커스텀 프리셋 5종(Gladia·AssemblyAI·Speechmatics·Rev.ai·Symbl) 제거+Custom 안내문(Soniox 호환 명시), OnboardingController NSWindowDelegate로 ✕ 닫기 시 markDone·Dock 정책 복원, STTPresetTests 3개 · gs_check M9 PASS

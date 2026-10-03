@@ -84,7 +84,7 @@
 "stt.preset.speechmatics.note" = "Real-time streaming provider with regional endpoints.";
 "stt.preset.revai.note" = "Real-time streaming provider.";
 "stt.preset.symbl.note" = "Real-time streaming provider.";
-"stt.preset.custom.note" = "Any streaming WebSocket STT endpoint. Enter the URL manually.";
+"stt.preset.custom.note" = "Enter a Soniox-compatible real-time WebSocket URL. Other vendors (AssemblyAI, Gladia, …) use different protocols and aren't supported.";
 
 /* General — Microphone section */
 "mic.section" = "Microphone";

@@ -84,7 +84,7 @@
 "stt.preset.speechmatics.note" = "리전별 엔드포인트를 제공하는 실시간 스트리밍 제공자입니다.";
 "stt.preset.revai.note" = "실시간 스트리밍 제공자입니다.";
 "stt.preset.symbl.note" = "실시간 스트리밍 제공자입니다.";
-"stt.preset.custom.note" = "스트리밍 WebSocket STT 엔드포인트라면 직접 URL을 입력해 사용할 수 있습니다.";
+"stt.preset.custom.note" = "Soniox 호환 실시간 WebSocket 엔드포인트의 URL을 직접 입력하세요. 다른 업체(AssemblyAI·Gladia 등)는 프로토콜이 달라 지원하지 않습니다.";
 
 /* General — Microphone section */
 "mic.section" = "마이크";
