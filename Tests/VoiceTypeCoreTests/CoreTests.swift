@@ -181,9 +181,9 @@ final class LLMPresetTests: XCTestCase {
         let p = LLMPresets.match(endpoint: "https://my.local/v1/chat/completions")
         XCTAssertTrue(p.isCustom)
     }
-    func testDefaultLLMIsGeminiFlashLite() {
-        XCTAssertEqual(LLMConfig().model, "gemini-3.1-flash-lite")
-        XCTAssertEqual(LLMPresets.match(endpoint: LLMConfig().endpoint).name, "Gemini")
+    func testDefaultLLMIsOpenAILuna() {
+        XCTAssertEqual(LLMConfig().model, "gpt-6-luna")
+        XCTAssertEqual(LLMPresets.match(endpoint: LLMConfig().endpoint).name, "OpenAI")
     }
 
     /// 프리셋 기본 모델 중 어느 것도 이미 폐기된 모델이 아니어야 한다.
@@ -230,7 +230,8 @@ final class LLMPresetTests: XCTestCase {
     }
 
     func testNonReasoningProvidersKeepTemperatureAndMaxTokens() {
-        for cfg in [LLMConfig(),   // Gemini
+        for cfg in [LLMConfig(endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                              model: "gemini-3.1-flash-lite"),   // Gemini
                     LLMConfig(endpoint: "https://api.openai.com/v1/chat/completions", model: "gpt-4.1-mini"),
                     LLMConfig(endpoint: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-20b")] {
             let body = PromptBuilder.requestBody(transcript: "x", instruction: "", glossary: [], config: cfg)

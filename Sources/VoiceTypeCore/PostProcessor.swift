@@ -6,9 +6,9 @@ public struct LLMConfig: Codable, Sendable {
     public var model: String      // gemini-3.1-flash-lite, gpt-4.1-nano 등
     public var temperature: Double
 
-    public init(endpoint: String = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-                model: String = "gemini-3.1-flash-lite",   // non-reasoning, 무료 티어, 한국어 강함
-                temperature: Double = 0.3) {
+    public init(endpoint: String = "https://api.openai.com/v1/chat/completions",
+                model: String = "gpt-6-luna",   // 승인 목록 최저가($0.10/$0.50), 추론 끄면 ~1.2s, 한국어 교정 품질 최상(실측 2026-10-04)
+                temperature: Double = 0.3) {   // 추론 계열은 요청 시 temperature를 보내지 않는다(PromptBuilder)
         self.endpoint = endpoint
         self.model = model
         self.temperature = temperature
