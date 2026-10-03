@@ -64,7 +64,6 @@ public enum PromptBuilder {
 
         var body: [String: Any] = [
             "model": config.model,
-            "temperature": config.temperature,
             "messages": [
                 ["role": "system", "content": systemPrompt(instruction: instruction, glossary: glossary)],
                 ["role": "user",      "content": fewShotUser],
@@ -72,16 +71,28 @@ public enum PromptBuilder {
                 ["role": "user",      "content": "<transcript>\(transcript)</transcript>"],
             ],
         ]
-        body.merge(providerExtras(endpoint: config.endpoint)) { _, new in new }
+        // OpenAI 추론 계열은 temperature≠1을 400으로 거부 → 아예 보내지 않는다(기본값 사용)
+        if !LLMPresets.isOpenAIReasoning(endpoint: config.endpoint, model: config.model) {
+            body["temperature"] = config.temperature
+        }
+        body.merge(providerExtras(endpoint: config.endpoint, model: config.model)) { _, new in new }
         return body
     }
 
     /// 제공사별 추가 파라미터. 다른 제공사는 모르는 필드를 400으로 거절할 수 있어 해당 제공사에만 붙인다.
-    public static func providerExtras(endpoint: String) -> [String: Any] {
+    public static func providerExtras(endpoint: String, model: String) -> [String: Any] {
         if LLMPresets.isDeepSeek(endpoint) {
             return ["thinking": ["type": "disabled"]]
         }
+        if LLMPresets.isOpenAIReasoning(endpoint: endpoint, model: model) {
+            return ["reasoning_effort": "none"]   // 기본 추론은 한 줄 교정에 2~3초를 더한다
+        }
         return [:]
+    }
+
+    /// 출력 길이 제한 파라미터 이름. OpenAI 추론 계열은 max_tokens를 400으로 거부하고 max_completion_tokens만 받는다.
+    public static func maxTokensKey(endpoint: String, model: String) -> String {
+        LLMPresets.isOpenAIReasoning(endpoint: endpoint, model: model) ? "max_completion_tokens" : "max_tokens"
     }
 
     public static func requestBodyData(transcript: String,

@@ -36,10 +36,10 @@ enum KeyTester {
             }
             var body: [String: Any] = [
                 "model": config.model,
-                "max_tokens": 1,
+                PromptBuilder.maxTokensKey(endpoint: config.endpoint, model: config.model): 16,
                 "messages": [["role": "user", "content": "hi"]],
             ]
-            body.merge(PromptBuilder.providerExtras(endpoint: config.endpoint)) { _, new in new }
+            body.merge(PromptBuilder.providerExtras(endpoint: config.endpoint, model: config.model)) { _, new in new }
             req.httpBody = try JSONSerialization.data(withJSONObject: body)
             let (data, resp) = try await URLSession.shared.data(for: req)
             guard let http = resp as? HTTPURLResponse else { return .fail("응답을 받지 못했습니다.") }

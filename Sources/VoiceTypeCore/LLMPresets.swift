@@ -51,8 +51,8 @@ public enum LLMPresets {
                   note: "High quality. Use Haiku for speed. console.anthropic.com"),
         LLMPreset(name: "OpenAI",
                   endpoint: "https://api.openai.com/v1/chat/completions",
-                  defaultModel: "gpt-4o-mini",
-                  note: "Reliable. platform.openai.com"),
+                  defaultModel: "gpt-6-luna",
+                  note: "Cheapest OpenAI ($0.10/$0.50 per 1M), ~1.2s, great Korean cleanup. VoiceType turns reasoning off automatically. platform.openai.com"),
         LLMPreset(name: "OpenRouter",
                   endpoint: "https://openrouter.ai/api/v1/chat/completions",
                   defaultModel: "google/gemini-3.1-flash-lite",
@@ -108,6 +108,10 @@ public enum LLMPresets {
         ("api.groq.com", "llama-3.1-8b-instant", "openai/gpt-oss-20b"),
         ("generativelanguage.googleapis.com", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"),
         ("openrouter.ai", "google/gemini-2.5-flash-lite", "google/gemini-3.1-flash-lite"),
+        // OpenAI: gpt-4.1-nano 2026-10-23 셧다운, gpt-5-nano 2026-12-11 셧다운 → gpt-6-luna (2026-09-23 출시, 승인 목록 최저가)
+        ("api.openai.com", "gpt-4.1-nano", "gpt-6-luna"),
+        ("api.openai.com", "gpt-5-nano", "gpt-6-luna"),
+        ("api.openai.com", "gpt-4o-mini", "gpt-6-luna"),
     ]
 
     /// 폐기된 모델명이면 대체 모델명을, 아니면 그대로 돌려준다.
@@ -118,6 +122,14 @@ public enum LLMPresets {
             return r.replacement
         }
         return model
+    }
+
+    /// OpenAI 추론 계열(gpt-5.x/gpt-6.x). 이 계열은 temperature를 1 외 값으로 보내면 400으로 거부하고,
+    /// 기본 추론이 켜져 있어 한 줄 교정에도 2~3초가 걸린다(reasoning_effort=none이면 약 1.2초).
+    public static func isOpenAIReasoning(endpoint: String, model: String) -> Bool {
+        guard normalize(endpoint).contains("api.openai.com") else { return false }
+        let m = model.lowercased()
+        return m.hasPrefix("gpt-5") || m.hasPrefix("gpt-6") || m.hasPrefix("o1") || m.hasPrefix("o3") || m.hasPrefix("o4")
     }
 
     /// DeepSeek V4는 기본이 thinking 모드라 한 줄 교정에도 5~15초가 걸린다. 받아쓰기에선 끈다.

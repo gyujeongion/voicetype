@@ -220,6 +220,34 @@ final class LLMPresetTests: XCTestCase {
         XCTAssertEqual(s.llm.endpoint, "https://api.deepseek.com/v1/chat/completions")
     }
 
+    /// OpenAI 추론 계열(gpt-6-luna 등)은 temperature≠1을 400으로 거부한다 — 실제 API로 확인(2026-10-04).
+    func testOpenAIReasoningModelOmitsTemperatureAndTurnsReasoningOff() {
+        let cfg = LLMConfig(endpoint: "https://api.openai.com/v1/chat/completions", model: "gpt-6-luna", temperature: 0.3)
+        let body = PromptBuilder.requestBody(transcript: "x", instruction: "", glossary: [], config: cfg)
+        XCTAssertNil(body["temperature"])
+        XCTAssertEqual(body["reasoning_effort"] as? String, "none")
+        XCTAssertEqual(PromptBuilder.maxTokensKey(endpoint: cfg.endpoint, model: cfg.model), "max_completion_tokens")
+    }
+
+    func testNonReasoningProvidersKeepTemperatureAndMaxTokens() {
+        for cfg in [LLMConfig(),   // Gemini
+                    LLMConfig(endpoint: "https://api.openai.com/v1/chat/completions", model: "gpt-4.1-mini"),
+                    LLMConfig(endpoint: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-20b")] {
+            let body = PromptBuilder.requestBody(transcript: "x", instruction: "", glossary: [], config: cfg)
+            XCTAssertEqual(body["temperature"] as? Double, 0.3, cfg.model)
+            XCTAssertNil(body["reasoning_effort"], cfg.model)
+            XCTAssertEqual(PromptBuilder.maxTokensKey(endpoint: cfg.endpoint, model: cfg.model), "max_tokens")
+        }
+    }
+
+    func testRetiredOpenAIModelsMigrateToLuna() {
+        let ep = "https://api.openai.com/v1/chat/completions"
+        for old in ["gpt-4.1-nano", "gpt-5-nano", "gpt-4o-mini"] {
+            XCTAssertEqual(LLMPresets.migratedModel(endpoint: ep, model: old), "gpt-6-luna", old)
+        }
+        XCTAssertEqual(LLMPresets.migratedModel(endpoint: ep, model: "gpt-4.1-mini"), "gpt-4.1-mini")
+    }
+
     /// DeepSeek V4는 thinking 모드가 기본이라 끄는 파라미터를 붙이고, 다른 제공사엔 붙이지 않는다.
     func testThinkingDisabledOnlyForDeepSeek() {
         let ds = LLMConfig(endpoint: "https://api.deepseek.com/v1/chat/completions", model: "deepseek-v4-flash")
