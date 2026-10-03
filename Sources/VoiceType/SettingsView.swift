@@ -117,6 +117,7 @@ struct SettingsView: View {
                 LabeledRow(t("prompts.llm.endpoint")) {
                     TextField(vm.llmUsesLocalEndpoint ? "http://127.0.0.1:11434/v1/chat/completions" : "https://…/v1/chat/completions",
                               text: $vm.settings.llm.endpoint)
+                        .labelsHidden()   // 그룹 Form에선 제목이 왼쪽 라벨로 또 그려져 값이 두 번 보였다
                         .onChange(of: vm.settings.llm.endpoint) { _, _ in
                             vm.reloadLLMKeyForCurrentEndpoint()
                         }
@@ -124,6 +125,7 @@ struct SettingsView: View {
 
                 LabeledRow(t("prompts.llm.model")) {
                     TextField(t("prompts.llm.model"), text: $vm.settings.llm.model)
+                        .labelsHidden()
                 }
 
                 if vm.llmUsesLocalEndpoint {
@@ -144,6 +146,7 @@ struct SettingsView: View {
 
                 LabeledRow(vm.llmNeedsAPIKey ? t("prompts.llm.apikey") : t("llm.apikey.optional")) {
                     SecureField(vm.llmUsesLocalEndpoint ? t("llm.apikey.placeholder.optional") : "", text: $vm.llmKey)
+                        .labelsHidden()
                 }
 
                 HStack {
@@ -603,6 +606,9 @@ struct SettingsView: View {
 
     // MARK: - 히스토리
 
+    private enum HistoryKind: Hashable { case dictation, recordings }
+    /// F5 녹음이 수십 건 쌓이면 받아쓰기 기록이 화면 한참 아래로 밀려, 구역을 전환식으로 나눈다.
+    @State private var historyKind: HistoryKind = .dictation
     @State private var historyQuery = ""
     @State private var confirmClearHistory = false
     @State private var recordingPendingDelete: RecordingStore.Entry?
@@ -633,13 +639,21 @@ struct SettingsView: View {
             .padding(.horizontal)
             .padding(.top, 4)
 
+            Picker("", selection: $historyKind) {
+                Text(String(format: t("history.kind.dictation"), history.entries.count)).tag(HistoryKind.dictation)
+                Text(String(format: t("history.kind.recordings"), recordings.entries.count)).tag(HistoryKind.recordings)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(.horizontal)
+
             if let err = player.errorMessage {
                 Text(err).font(.caption).foregroundStyle(.orange).padding(.horizontal)
             }
 
             List {
-                // 녹음에는 텍스트가 없어 검색 대상이 아니다 — 검색 중엔 받아쓰기 결과만 보여준다
-                if historyQuery.trimmingCharacters(in: .whitespaces).isEmpty {
+                // 녹음에는 텍스트가 없어 검색 대상이 아니다 — 녹음 구역엔 검색창을 적용하지 않는다
+                if historyKind == .recordings {
                     Section {
                         if recordings.entries.isEmpty {
                             Text(t("history.f5.empty"))
@@ -673,6 +687,7 @@ struct SettingsView: View {
                     }
                 }
 
+                if historyKind == .dictation {
                 Section {
                     let visible = HistoryFilter.filter(history.entries, query: historyQuery)
                     if visible.isEmpty {
@@ -705,6 +720,7 @@ struct SettingsView: View {
                                 .font(.caption)
                         }
                     }
+                }
                 }
             }
         }

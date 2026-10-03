@@ -199,6 +199,8 @@
 "history.play.failed" = "Couldn't play this audio. The file may have been moved or deleted.";
 "history.search" = "Search dictation history";
 "history.search.none" = "No matches.";
+"history.kind.dictation" = "Dictation (%d)";
+"history.kind.recordings" = "F5 Recordings (%d)";
 "history.delete.all.confirm" = "Delete all dictation history?";
 "history.delete.all.message" = "Text and saved original audio will be deleted permanently. F5 recordings are not affected.";
 "history.f5.delete.confirm" = "Move this recording to the Trash?";
