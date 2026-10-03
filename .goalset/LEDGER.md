@@ -12,3 +12,7 @@ append-only 진행 로그. 모듈 완료·파킹·막힘·방향 전환마다 1�
 - 2026-10-03 04:55 [M6] 히스토리: 앱 내 재생/정지(AudioPreviewPlayer, F8·F5 공통), 검색창(HistoryFilter: 최종본·원문·프로파일 AND 검색 +3테스트), 전체삭제 확인창, F5 녹음은 확인창+휴지통 이동(실패 시 아무것도 안 지움), 복사됨 표시 1.5초 후 복귀, 탭 닫으면 재생 정지 · gs_check M6 PASS
 - 2026-10-03 04:58 [M7] AudioCapture가 AVAudioEngineConfigurationChange 시 장치 재선택+tap/컨버터 재구성 재시작(0.3초 모음), F5 마이크·F8 받아쓰기 연결, 재연결/끊김 토스트 · --selftest-device-change 4: 재연결 1회, 파일 3.97초/4.0, 뒤1/4 유효샘플 78% SELFTEST_PASS
 - 2026-10-03 04:58 [pause] 사용자 요청으로 일시정지. 남은 모듈 M8·M9·M10. 재개: GS arm 후 M8부터
+- 2026-10-03 04:58 [hook] DISARM (manual)
+- 2026-10-03 21:16 [hook] ARM session=8360337a budget=8.0h
+- 2026-10-03 21:16 [resume] 사용자 '마저해' — M8부터 재개, 재arm
+- 2026-10-03 21:17 [M8] 메뉴바 동적 재구성(NSMenuDelegate): 프로파일별 받아쓰기+단축키 표기, 녹음 중엔 종료/취소, F5 시작/종료·폴더 열기, 마지막 결과 복사; dictation.stop()/cancel() 추가(꾹누르기 프로파일도 메뉴로 종료), 녹음·처리 중에만 Esc 임시 핫키로 취소(세션토큰 무효화+오디오 삭제+붙여넣기 없음) · gs_check M8 PASS (실동작은 M10 설치 후)

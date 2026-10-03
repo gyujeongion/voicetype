@@ -13,6 +13,6 @@
 | M5 | F5 녹음 설정 UI (B6) | M4 | DONE | 일반 탭에 F5 단축키 캡처·저장 폴더 선택/기본값 복원/열기, 변경 즉시 반영 | `scripts/gs_check.sh M5` | - |
 | M6 | 히스토리 재생·검색·안전삭제 (B10) | - | DONE | 앱 안 재생 버튼(F8·F5 공통), 검색창, 삭제 확인창, F5 폴더 휴지통 이동 | `scripts/gs_check.sh M6` | - |
 | M7 | 입력 장치 변경 복구 (B8) | - | DONE | AVAudioEngineConfigurationChange 시 캡처 자동 재시작, CLI 자기검증에서 강제 알림 후에도 기록 지속 | `scripts/gs_check.sh M7` | - |
-| M8 | 메뉴바·Esc 취소 (B12) | M3 | TODO | 메뉴에 단축키 표기·F5 항목·마지막 결과 복사·녹음 폴더 열기, 꾹누르기 프로파일도 메뉴로 중지, 녹음 중 Esc로 취소 | `scripts/gs_check.sh M8` | - |
+| M8 | 메뉴바·Esc 취소 (B12) | M3 | DONE | 메뉴에 단축키 표기·F5 항목·마지막 결과 복사·녹음 폴더 열기, 꾹누르기 프로파일도 메뉴로 중지, 녹음 중 Esc로 취소 | `scripts/gs_check.sh M8` | - |
 | M9 | STT 프리셋·온보딩 정리 (B5·B13) | - | TODO | 동작 불가 커스텀 프리셋 제거, 온보딩 ✕ 닫기 시 정리 | `scripts/gs_check.sh M9` | - |
 | M10 | 설치·실물 확인 | M1,M2,M3,M4,M5,M6,M7,M8,M9 | TODO | release 빌드 서명·/Applications 설치·실행 중, 설정 파일 핵심 필드 보존, 설정창 스크린샷 확인 | `scripts/gs_check.sh M10` | D-01 |

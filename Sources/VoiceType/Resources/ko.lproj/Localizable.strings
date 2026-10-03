@@ -16,6 +16,15 @@
 "menu.paste" = "붙여넣기";
 "menu.select_all" = "전체 선택";
 "menu.toggle_recording" = "녹음 시작 / 종료";
+"menu.dictation.start" = "받아쓰기: %@";
+"menu.dictation.stop" = "받아쓰기 종료 (결과 붙여넣기)";
+"menu.dictation.cancel" = "받아쓰기 취소 (Esc)";
+"menu.recorder.start" = "F5 녹음 시작";
+"menu.recorder.stop" = "F5 녹음 종료";
+"menu.recorder.folder" = "녹음 폴더 열기";
+"menu.copy_last" = "마지막 받아쓰기 결과 복사";
+"menu.copied" = "마지막 결과를 클립보드에 복사했습니다.";
+"dictation.cancelled" = "받아쓰기를 취소했습니다. 아무것도 붙여넣지 않았습니다.";
 "menu.settings" = "설정…";
 "menu.check_updates" = "업데이트 확인…";
 "menu.quit" = "VoiceType 종료";

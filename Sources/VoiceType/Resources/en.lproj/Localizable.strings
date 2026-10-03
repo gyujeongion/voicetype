@@ -16,6 +16,15 @@
 "menu.paste" = "Paste";
 "menu.select_all" = "Select All";
 "menu.toggle_recording" = "Start / Stop Recording";
+"menu.dictation.start" = "Dictate: %@";
+"menu.dictation.stop" = "Finish dictation (paste result)";
+"menu.dictation.cancel" = "Cancel dictation (Esc)";
+"menu.recorder.start" = "Start recording";
+"menu.recorder.stop" = "Stop recording";
+"menu.recorder.folder" = "Open recordings folder";
+"menu.copy_last" = "Copy last dictation result";
+"menu.copied" = "Copied the last result to the clipboard.";
+"dictation.cancelled" = "Dictation cancelled. Nothing was pasted.";
 "menu.settings" = "Settings…";
 "menu.check_updates" = "Check for Updates…";
 "menu.quit" = "Quit VoiceType";

@@ -49,6 +49,25 @@ final class DictationController {
         }
     }
 
+    var isRecording: Bool { state == .recording }
+
+    /// 메뉴·외부에서 녹음 종료. 꾹누르기(push-to-talk) 프로파일은 키를 떼야 끝나므로
+    /// 메뉴로는 끝낼 방법이 없었다 — 이 경로가 그걸 풀어준다.
+    func stop() {
+        if state == .recording { finish() }
+    }
+
+    /// 녹음·처리를 취소한다. 결과를 붙여넣지 않고 클립보드도 건드리지 않으며 히스토리에도 남기지 않는다.
+    /// (말실수·잘못 누름·엉뚱한 앱에 포커스된 경우 쓰레기 텍스트가 붙는 걸 막는다)
+    func cancel() {
+        guard state == .recording || state == .finishing else { return }
+        // 세션 토큰을 먼저 지워야 진행 중인 STT 콜백·후처리 Task가 결과를 내보내지 못한다
+        sessionToken = nil
+        engine?.cancel()
+        cleanup()   // 원본 오디오 파일도 여기서 지워진다
+        setState(.idle)
+    }
+
     /// 핫키를 뗐을 때. push-to-talk 모드에서만 녹음 종료.
     func release(profile: PromptProfile) {
         guard profile.triggerMode == .pushToTalk else { return }

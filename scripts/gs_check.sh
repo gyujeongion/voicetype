@@ -68,7 +68,7 @@ M7)
 M8)
     has $S/AppDelegate.swift "cancelHotkeyID"
     has $S/DictationController.swift "func cancel()"
-    has $S/AppDelegate.swift "menu.recorder.toggle"
+    has $S/AppDelegate.swift "menu.recorder.start"
     has $S/AppDelegate.swift "copyLastResult"
     ;;
 M9)

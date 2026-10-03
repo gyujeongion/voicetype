@@ -3,12 +3,14 @@ import SwiftUI
 import VoiceTypeCore
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let dictation = DictationController()
     private let recorder = RecorderController()
     /// 녹음 핫키 예약 id. 프로파일은 배열 인덱스(0..n)를 id로 쓰므로 충돌하지 않는다.
     static let recordingHotkeyID: UInt32 = 9000
+    /// 받아쓰기 녹음 중에만 잠깐 잡는 Esc(취소) 핫키 id. 녹음이 아닐 땐 Esc를 가로채지 않는다.
+    static let cancelHotkeyID: UInt32 = 9001
     private var elapsedTimer: Timer?
     private let hotkey = HotkeyManager()
     private let spaceTrigger = SpaceBarTrigger()
@@ -119,6 +121,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dictation.onStateChange = { [weak self] state in
             guard let self = self else { return }
             self.updateIcon(state)
+            // 녹음·처리 중에만 Esc를 취소 키로 잡는다 (끝나면 즉시 반납 — 평소 Esc는 건드리지 않음)
+            if state == .recording || state == .finishing {
+                self.hotkey.registerTemporary(id: Self.cancelHotkeyID, keyCode: 53, modifiers: 0)
+            } else {
+                self.hotkey.unregisterTemporary(id: Self.cancelHotkeyID)
+            }
             switch state {
             case .starting:  break  // transitional — no UI change
             case .recording:
@@ -264,6 +272,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupHotkey() {
         hotkey.onTrigger = { [weak self] id in
             guard let self = self else { return }
+            if id == Self.cancelHotkeyID {
+                guard self.dictation.state == .recording || self.dictation.state == .finishing else { return }
+                self.dictation.cancel()
+                self.notify(self.l.text("dictation.cancelled"), kind: .info)
+                return
+            }
             if id == Self.recordingHotkeyID {
                 // 받아쓰기가 마이크를 점유/처리 중일 때 F5 녹음을 새로 시작하면 자원이 충돌한다.
                 // (반대 방향 — 녹음 중 받아쓰기 차단 — 은 바로 아래에서 처리)
@@ -286,7 +300,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotkey.onRelease = { [weak self] id in
             guard let self = self else { return }
-            if id == Self.recordingHotkeyID { return }   // 녹음은 토글이라 release를 쓰지 않는다
+            if id == Self.recordingHotkeyID || id == Self.cancelHotkeyID { return }   // 토글/취소는 release를 쓰지 않는다
             let profiles = SettingsStore.shared.settings.profiles
             let idx = Int(id)
             guard idx >= 0, idx < profiles.count else { return }
@@ -352,14 +366,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - 액션
 
-    @objc private func toggleRecording() {
-        // 메뉴에서 토글 → 첫 프로파일 사용 (녹음 중이면 프로파일 무관하게 종료)
+    /// 메뉴에서 받아쓰기 시작/종료. 시작은 선택한 프로파일로, 종료는 프로파일·트리거 방식과 무관하게
+    /// (꾹누르기 프로파일은 키를 떼야 끝나서 예전엔 메뉴로 못 끝냈다).
+    @objc private func dictationMenuAction(_ sender: NSMenuItem) {
+        if dictation.isRecording {
+            dictation.stop()
+            return
+        }
         guard !recorder.isRecording else {
             notify(l.text("recorder.dictation_blocked"))
             return
         }
-        guard let first = SettingsStore.shared.settings.profiles.first else { return }
-        dictation.trigger(profile: first)
+        let profiles = SettingsStore.shared.settings.profiles
+        guard sender.tag >= 0, sender.tag < profiles.count else { return }
+        var p = profiles[sender.tag]
+        p.triggerMode = .toggle   // 메뉴로 시작했으면 메뉴로 끝낸다 (키를 누르고 있는 게 아니므로)
+        dictation.trigger(profile: p)
+    }
+
+    @objc private func cancelDictationAction() {
+        dictation.cancel()
+        notify(l.text("dictation.cancelled"), kind: .info)
+    }
+
+    @objc private func toggleRecorderAction() {
+        if !recorder.isRecording && dictation.isActive {
+            notify(l.text("recorder.blocked_by_dictation"))
+            return
+        }
+        recorder.toggle()
+    }
+
+    @objc private func copyLastResult() {
+        guard let last = HistoryStore.shared.entries.first, !last.finalText.isEmpty else { return }
+        TextInjector.copyToClipboard(last.finalText)
+        notify(l.text("menu.copied"), kind: .info)
+    }
+
+    @objc private func openRecordingFolderAction() {
+        let url = RecordingStore.shared.rootURL
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func openSettings() {
@@ -410,18 +457,71 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// 메뉴는 열 때마다 현재 상태(녹음 중인지, 단축키가 뭔지, 마지막 결과가 있는지)로 다시 만든다.
     private func rebuildStatusMenu() {
         let menu = NSMenu()
-        let toggle = NSMenuItem(title: l.text("menu.toggle_recording"), action: #selector(toggleRecording), keyEquivalent: "")
-        menu.addItem(toggle)
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: l.text("menu.settings"), action: #selector(openSettings), keyEquivalent: ","))
-        let updateItem = NSMenuItem(title: l.text("menu.check_updates"), action: #selector(checkForUpdates), keyEquivalent: "")
-        menu.addItem(updateItem)
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: l.text("menu.quit"), action: #selector(quit), keyEquivalent: "q"))
-        for item in menu.items { item.target = self }
+        menu.delegate = self
         statusItem.menu = menu
+        populate(menu)
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        populate(menu)
+    }
+
+    private func populate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        let settings = SettingsStore.shared.settings
+        func shortcut(_ code: UInt32, _ mods: UInt32) -> String {
+            code == 0 ? "" : "  \(KeyNames.display(keyCode: code, modifiers: mods))"
+        }
+
+        // 받아쓰기 — 프로파일마다 한 줄. 녹음 중엔 종료/취소로 바뀐다.
+        if dictation.isRecording {
+            menu.addItem(item(l.text("menu.dictation.stop"), #selector(dictationMenuAction(_:)), tag: 0))
+            menu.addItem(item(l.text("menu.dictation.cancel"), #selector(cancelDictationAction)))
+        } else if dictation.isActive {
+            menu.addItem(item(l.text("menu.dictation.cancel"), #selector(cancelDictationAction)))
+        } else {
+            for (i, p) in settings.profiles.enumerated() {
+                let title = String(format: l.text("menu.dictation.start"), p.name) + shortcut(p.hotkeyKeyCode, p.hotkeyModifiers)
+                let it = item(title, #selector(dictationMenuAction(_:)), tag: i)
+                it.isEnabled = !recorder.isRecording
+                menu.addItem(it)
+            }
+        }
+
+        // F5 회의 녹음
+        menu.addItem(.separator())
+        let recTitle = (recorder.isRecording ? l.text("menu.recorder.stop") : l.text("menu.recorder.start"))
+            + shortcut(settings.recordingHotkeyKeyCode, settings.recordingHotkeyModifiers)
+        let rec = item(recTitle, #selector(toggleRecorderAction))
+        rec.isEnabled = recorder.state == .idle || recorder.state == .recording
+        menu.addItem(rec)
+        menu.addItem(item(l.text("menu.recorder.folder"), #selector(openRecordingFolderAction)))
+
+        // 마지막 결과 — 자동 붙여넣기를 놓쳤을 때 메뉴에서 바로 복사
+        menu.addItem(.separator())
+        let last = item(l.text("menu.copy_last"), #selector(copyLastResult))
+        last.isEnabled = !(HistoryStore.shared.entries.first?.finalText.isEmpty ?? true)
+        menu.addItem(last)
+
+        menu.addItem(.separator())
+        let settingsItem = item(l.text("menu.settings"), #selector(openSettings))
+        settingsItem.keyEquivalent = ","
+        menu.addItem(settingsItem)
+        menu.addItem(item(l.text("menu.check_updates"), #selector(checkForUpdates)))
+        menu.addItem(.separator())
+        let quitItem = item(l.text("menu.quit"), #selector(quit))
+        quitItem.keyEquivalent = "q"
+        menu.addItem(quitItem)
+    }
+
+    private func item(_ title: String, _ action: Selector, tag: Int = 0) -> NSMenuItem {
+        let it = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        it.target = self
+        it.tag = tag
+        return it
     }
 
     private func refreshLocalizedUI() {
