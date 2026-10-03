@@ -89,23 +89,37 @@ private final class ResultBox: @unchecked Sendable {
 /// 파일 → Soniox 전사 (CLI 통합 테스트용)
 enum CLITranscriber {
     static func run(path: String) {
+        let isDeepgram = ProcessInfo.processInfo.environment["VT_PROVIDER"] == "deepgram"
         guard let apiKey = ProcessInfo.processInfo.environment["SONIOX_API_KEY"]
-                ?? Keychain.get(Keychain.sonioxKey) else {
+                ?? Keychain.get(Keychain.sonioxKey) ?? (isDeepgram ? "" : nil) else {
             FileHandle.standardError.write(Data("SONIOX_API_KEY 환경변수 또는 Keychain 키가 없습니다\n".utf8))
             exit(2)
         }
         var settings = AppSettings.default
         settings.dictionary = TermDictionary(rawText: "Aphex Twin, Four Tet, Floating Points")
 
-        let client = SonioxClient()
+        // VT_PROVIDER=deepgram 이면 Deepgram 클라이언트로 같은 경로를 검증 (키는 환경변수 또는 Keychain)
+        let client: STTEngine
+        var sttKey = apiKey
+        if ProcessInfo.processInfo.environment["VT_PROVIDER"] == "deepgram" {
+            sttKey = ProcessInfo.processInfo.environment["DEEPGRAM_API_KEY"]
+                ?? Keychain.get(STTEngineFactory.keychainAccount(for: .deepgram)) ?? ""
+            client = DeepgramClient()
+        } else {
+            client = SonioxClient()
+        }
         let sem = DispatchSemaphore(value: 0)
         var resultText: String?
-        client.onFinished = { text in resultText = text; sem.signal() }
+        let t0 = Date()
+        let trace = ProcessInfo.processInfo.environment["VT_TRACE"] != nil
+        func tr(_ m: String) { if trace { FileHandle.standardError.write(Data(String(format: "%5.2fs %@\n", Date().timeIntervalSince(t0), m).utf8)) } }
+        client.onUpdate = { f, i in tr("update final='\(f)' interim='\(i)'") }
+        client.onFinished = { text in tr("FINISHED '\(text)'"); resultText = text; sem.signal() }
         client.onError = { err in
             FileHandle.standardError.write(Data("ERROR: \(err.localizedDescription)\n".utf8))
             sem.signal()
         }
-        client.start(apiKey: apiKey,
+        client.start(apiKey: sttKey,
                      languageHints: settings.languageHints,
                      terms: settings.dictionary.hintTerms(),
                      customEndpoint: nil)
@@ -120,6 +134,7 @@ enum CLITranscriber {
                 Thread.sleep(forTimeInterval: 0.1)
                 i = end
             }
+            tr("audio sent → finish()")
             client.finish()
         }
 

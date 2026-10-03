@@ -22,6 +22,10 @@ M1)
     # 결과 도착 즉시 타임아웃 취소 + 옛 세션 Task가 새 세션을 정리하지 못하게
     has $S/DictationController.swift "finishTimeout?.cancel()"
     has $S/DictationController.swift "guard self.sessionToken == token"
+    # 회귀 방지(2026-10-03): 취소된 timeout Task가 `try?`로 CancellationError를 삼키고 흘러내려
+    # 결과 도착 직후 가짜 'STT 응답 지연' 에러를 내던 버그
+    hasnt $S/DictationController.swift 'try? await Task.sleep'
+    has $S/DictationController.swift 'catch { return }'
     has $S/SonioxClient.swift "invalidateAndCancel"
     has $S/DeepgramClient.swift "invalidateAndCancel"
     ;;

@@ -174,9 +174,12 @@ final class DictationController {
         engine?.finish()
         // 결과는 engine.onFinished 로 도착 — 안 오면 타임아웃으로 복구
         finishTimeout?.cancel()
+        let token = sessionToken
         finishTimeout = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(15))
-            guard let self = self, self.state == .finishing else { return }
+            // 취소(결과 도착·세션 종료)되면 Task.sleep이 CancellationError를 던진다. `try?`로 삼키면
+            // 취소됐는데도 아래로 흘러내려, 결과가 정상 도착한 직후에 가짜 '지연' 에러가 뜬다.
+            do { try await Task.sleep(for: .seconds(15)) } catch { return }
+            guard let self = self, self.state == .finishing, self.sessionToken == token else { return }
             self.engine?.cancel()
             self.cleanup()
             self.setState(.idle)

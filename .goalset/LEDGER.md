@@ -18,3 +18,5 @@ append-only 진행 로그. 모듈 완료·파킹·막힘·방향 전환마다 1�
 - 2026-10-03 21:17 [M8] 메뉴바 동적 재구성(NSMenuDelegate): 프로파일별 받아쓰기+단축키 표기, 녹음 중엔 종료/취소, F5 시작/종료·폴더 열기, 마지막 결과 복사; dictation.stop()/cancel() 추가(꾹누르기 프로파일도 메뉴로 종료), 녹음·처리 중에만 Esc 임시 핫키로 취소(세션토큰 무효화+오디오 삭제+붙여넣기 없음) · gs_check M8 PASS (실동작은 M10 설치 후)
 - 2026-10-03 21:17 [M9] 동작 불가 커스텀 프리셋 5종(Gladia·AssemblyAI·Speechmatics·Rev.ai·Symbl) 제거+Custom 안내문(Soniox 호환 명시), OnboardingController NSWindowDelegate로 ✕ 닫기 시 markDone·Dock 정책 복원, STTPresetTests 3개 · gs_check M9 PASS
 - 2026-10-03 21:26 [M10] release 빌드·Developer ID 서명·/Applications 설치, 실행 중(pid 확인), settings 9개 핵심 필드 보존 OK, 설정창(일반·F5 섹션·히스토리) 스크린샷 3장 육안 확인, M1~M10 gs_check 전체 PASS, 68 tests
+- 2026-10-03 21:28 [hook] DISARM (COMPLETE)
+- 2026-10-03 22:31 [M1-fix] 사용자 제보 'STT 응답 지연' = M1 변경의 회귀. finishTimeout을 handleFinal에서 cancel하면 'try? await Task.sleep'이 CancellationError를 삼키고 흘러내려 정상 결과 직후 가짜 지연 에러+cleanup+붙여넣기 누락. do/catch return + 세션토큰 가드로 수정, gs_check M1에 회귀 검사 추가. 실앱 F8 재현: 히스토리 기록·pasted True 확인
