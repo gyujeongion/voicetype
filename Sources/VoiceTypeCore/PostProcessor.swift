@@ -79,6 +79,13 @@ public enum PromptBuilder {
         return body
     }
 
+    /// CLI(codex exec)용 단일 프롬프트 — 채팅 메시지 구조가 없으므로 시스템 지시와 전사문을 한 덩어리로 보낸다.
+    public static func cliPrompt(transcript: String, instruction: String, glossary: [String]) -> String {
+        systemPrompt(instruction: instruction, glossary: glossary)
+            + "\n\n<transcript>\(transcript)</transcript>\n\n"
+            + "위 [지시]대로 변환한 텍스트만 출력하세요. 파일·명령·도구를 쓰지 말고, 인사·설명·머리말·꼬리말도 붙이지 마세요."
+    }
+
     /// 제공사별 추가 파라미터. 다른 제공사는 모르는 필드를 400으로 거절할 수 있어 해당 제공사에만 붙인다.
     public static func providerExtras(endpoint: String, model: String) -> [String: Any] {
         if LLMPresets.isDeepSeek(endpoint) {

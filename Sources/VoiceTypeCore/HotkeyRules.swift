@@ -33,7 +33,9 @@ public enum HotkeyRules {
                                      in settings: AppSettings,
                                      excludingProfileID: UUID? = nil,
                                      excludingRecording: Bool = false,
-                                     recordingName: String = "녹음") -> String? {
+                                     excludingSystemRecording: Bool = false,
+                                     recordingName: String = "녹음",
+                                     systemRecordingName: String = "시스템 소리 녹음") -> String? {
         guard keyCode != 0 else { return nil }
         for p in settings.profiles where p.id != excludingProfileID {
             if p.hotkeyKeyCode == keyCode && p.hotkeyModifiers == modifiers { return p.name }
@@ -42,6 +44,11 @@ public enum HotkeyRules {
            settings.recordingHotkeyKeyCode == keyCode,
            settings.recordingHotkeyModifiers == modifiers {
             return recordingName
+        }
+        if !excludingSystemRecording,
+           settings.systemRecordingHotkeyKeyCode == keyCode,
+           settings.systemRecordingHotkeyModifiers == modifiers {
+            return systemRecordingName
         }
         return nil
     }

@@ -151,7 +151,8 @@ enum CLITranscriber {
         var out = t
         let env = ProcessInfo.processInfo.environment
         // LLM 후처리 검증 (env LLM_INSTRUCTION + LLM_API_KEY 있을 때만)
-        if let inst = env["LLM_INSTRUCTION"], !inst.isEmpty, let lkey = env["LLM_API_KEY"] {
+        if let inst = env["LLM_INSTRUCTION"], !inst.isEmpty,
+           let lkey = env["LLM_API_KEY"] ?? (LLMPresets.isCodexCLI(env["LLM_ENDPOINT"] ?? "") ? "" : nil) {
             let cfg = LLMConfig(endpoint: env["LLM_ENDPOINT"] ?? "https://api.openai.com/v1/chat/completions",
                                 model: env["LLM_MODEL"] ?? "gpt-4o-mini")
             let sem2 = DispatchSemaphore(value: 0)

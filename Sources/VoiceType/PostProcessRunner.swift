@@ -18,6 +18,14 @@ enum PostProcessRunner {
                     apiKey: String?,
                     glossary: [String]) async -> PostProcessOutcome {
         guard !transcript.isEmpty else { return PostProcessOutcome(text: transcript, failure: nil) }
+        // 구독 경로: API 호출 없이 로컬 codex CLI(ChatGPT 로그인)로 처리
+        if LLMPresets.isCodexCLI(llm.endpoint) {
+            let prompt = PromptBuilder.cliPrompt(transcript: transcript, instruction: instruction, glossary: glossary)
+            switch await CodexCLIRunner.run(prompt: prompt, model: llm.model) {
+            case .success(let text): return PostProcessOutcome(text: text, failure: nil)
+            case .failure(let f):    return PostProcessOutcome(text: transcript, failure: f.message)
+            }
+        }
         guard let url = URL(string: llm.endpoint), url.scheme != nil else {
             return PostProcessOutcome(text: transcript, failure: "LLM 엔드포인트 주소가 올바르지 않습니다.")
         }

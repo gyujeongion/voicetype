@@ -21,6 +21,12 @@ enum KeyTester {
 
     /// LLM 키 테스트 — chat/completions에 최소 요청.
     static func testLLM(config: LLMConfig, apiKey: String?) async -> Result {
+        if LLMPresets.isCodexCLI(config.endpoint) {
+            switch await CodexCLIRunner.run(prompt: "Reply with exactly: OK", model: config.model, timeout: 60) {
+            case .success: return .ok("Codex 구독 연결 성공 (\(config.model))")
+            case .failure(let f): return .fail(f.message)
+            }
+        }
         let needsAPIKey = LLMPresets.requiresAPIKey(endpoint: config.endpoint)
         if needsAPIKey && (apiKey?.isEmpty != false) {
             return .fail("LLM API 키를 입력하세요.")

@@ -34,6 +34,12 @@
 "alert.open_settings" = "Open Settings";
 "alert.later" = "Later";
 "recorder.name" = "F5 Recording";
+"recorder.system.name" = "F6 System Audio Recording";
+"recorder.system.hotkey" = "System-audio-only shortcut";
+"recorder.system.note" = "Records only what the computer plays — no microphone (videos, the other side of a call). Needs Screen Recording permission; other apps notification sounds are captured too.";
+"recorder.reveal" = "Show the recording in Finder when it finishes";
+"menu.recorder.system.start" = "Record system audio only";
+"history.f5.system.only" = "System audio only";
 "recorder.section" = "F5 Meeting Recording";
 "recorder.hotkey" = "Start/stop shortcut";
 "recorder.folder" = "Save folder";
@@ -142,6 +148,7 @@
 "llm.local.models" = "Suggested local models";
 "llm.local.note" = "For Ollama, keep the local endpoint and choose a model name that exists on this Mac. You can also type any custom model tag.";
 "llm.apikey.optional" = "API Key (optional)";
+"llm.codex.note" = "Runs on your ChatGPT subscription quota — no API key, no per-use billing. Takes ~4–6s per call and uses subscription usage. Requires \"codex login\" in Terminal.";
 "llm.apikey.placeholder.optional" = "optional";
 
 /* General — Troubleshooting section */

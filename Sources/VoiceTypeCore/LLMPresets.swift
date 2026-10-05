@@ -33,6 +33,11 @@ public enum LLMPresets {
     /// Ranked by response latency for post-processing (faster = less perceived delay after dictation).
     /// Avoid reasoning models (o-series, R1, v4-flash) — they add 4–6s for simple cleanup tasks.
     public static let all: [LLMPreset] = [
+        LLMPreset(name: "Codex (ChatGPT 구독)",
+                  endpoint: codexCLIEndpoint,
+                  defaultModel: "gpt-6-luna",
+                  note: "Uses your ChatGPT subscription via the codex CLI — no API key, no per-use billing. ~4–6s per cleanup. Requires `codex login`.",
+                  requiresAPIKey: false),
         LLMPreset(name: "Groq",
                   endpoint: "https://api.groq.com/openai/v1/chat/completions",
                   defaultModel: "openai/gpt-oss-20b",
@@ -68,6 +73,13 @@ public enum LLMPresets {
                   note: "Any OpenAI-compatible endpoint.",
                   isCustom: true),
     ]
+
+    /// API가 아니라 로컬 `codex` CLI(ChatGPT 구독 쿼터)로 후처리하는 가상 엔드포인트.
+    public static let codexCLIEndpoint = "codex-cli://exec"
+
+    public static func isCodexCLI(_ endpoint: String) -> Bool {
+        normalize(endpoint).hasPrefix("codex-cli://")
+    }
 
     /// endpoint 표기 흔들림(공백·대소문자·끝 슬래시)을 흡수한 정규화 문자열.
     /// "https://api.openai.com/v1/" 과 "https://api.openai.com/v1" 을 같은 프로바이더로 본다.

@@ -10,6 +10,9 @@ import VoiceTypeCore
 @MainActor
 final class RecorderController {
     enum State { case idle, starting, recording, stopping, finalizing }
+    /// F5 = 마이크+컴퓨터 소리, F6 = 컴퓨터 소리만(마이크 안 씀)
+    enum Mode { case micAndSystem, systemOnly }
+    private(set) var mode: Mode = .micAndSystem
 
     private(set) var state: State = .idle
 
@@ -49,9 +52,11 @@ final class RecorderController {
 
     // MARK: - 토글
 
-    func toggle() {
+    func toggle(mode: Mode = .micAndSystem) {
         switch state {
-        case .idle:      start()
+        case .idle:
+            self.mode = mode
+            start()
         case .recording: Task { await stop() }
         default:         break   // starting/stopping/finalizing 중엔 무시
         }
@@ -73,6 +78,12 @@ final class RecorderController {
             return
         }
 
+        if mode == .systemOnly {
+            // 마이크를 안 쓰므로 마이크 권한은 묻지 않는다 — 대신 화면 기록 권한이 필수
+            Task { [weak self] in await self?.beginSystemOnly() }
+            return
+        }
+
         AudioCapture.requestPermission { [weak self] ok in
             MainActor.assumeIsolated {
                 guard let self = self else { return }
@@ -84,6 +95,46 @@ final class RecorderController {
                 self.beginRecording()
             }
         }
+    }
+
+    /// F6 — 컴퓨터 소리만. 시스템 트랙이 시작 못 하면 녹음 자체가 실패다(마이크 폴백 없음).
+    private func beginSystemOnly() async {
+        guard await SystemTrackRecorder.hasPermission() else {
+            onActionNeeded?(.screenRecordingDenied)
+            setState(.idle)
+            return
+        }
+        let now = Date()
+        let created: (session: RecordingSession, folder: URL)
+        do {
+            created = try store.createSession(startedAt: now)
+        } catch {
+            onError?("녹음 폴더 생성 실패: \(error.localizedDescription)")
+            setState(.idle)
+            return
+        }
+        let rec = SystemTrackRecorder()
+        rec.onLevel = { [weak self] level in
+            MainActor.assumeIsolated { self?.onSystemLevel?(level) }
+        }
+        rec.onFailure = { [weak self] msg in
+            MainActor.assumeIsolated { self?.onError?(msg) }
+        }
+        do {
+            try await rec.start(to: created.folder.appendingPathComponent("system.caf"), sessionStartedAt: now)
+        } catch {
+            try? FileManager.default.removeItem(at: created.folder)
+            onError?("컴퓨터 소리 녹음을 시작하지 못했습니다.\n\(error.localizedDescription)")
+            setState(.idle)
+            return
+        }
+        session = created.session
+        folder = created.folder
+        startedAt = now
+        system = rec
+        power.acquire(reason: "VoiceType 시스템 소리 녹음 중")
+        startDiskWatch()
+        setState(.recording)
     }
 
     private func beginRecording() {
@@ -198,11 +249,24 @@ final class RecorderController {
 
         setState(.finalizing)
 
-        let tracks = await finalizeTracks(in: folder, micResult: micResult,
+        let tracks: [TrackInfo]
+        if mode == .systemOnly {
+            // 마이크 없음 — 시스템 트랙 하나만 m4a로 마감
+            if let sys = sysResult, sys.durationSeconds > 0,
+               let info = await finalizeTrack(.system, in: folder,
+                                              duration: sys.durationSeconds,
+                                              discontinuities: sys.discontinuities) {
+                tracks = [info]
+            } else {
+                tracks = []
+            }
+        } else {
+            tracks = await finalizeTracks(in: folder, micResult: micResult,
                                           sysResult: sysResult, sysOffset: sysOffset)
+        }
 
         session.tracks = tracks
-        session.durationSeconds = micResult.durationSeconds
+        session.durationSeconds = mode == .systemOnly ? (sysResult?.durationSeconds ?? 0) : micResult.durationSeconds
         session.captureStatus = tracks.isEmpty ? .failed : .done
         try? store.save(session, in: folder)
         store.refresh()

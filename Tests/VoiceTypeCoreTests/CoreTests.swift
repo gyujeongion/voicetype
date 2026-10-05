@@ -241,6 +241,23 @@ final class LLMPresetTests: XCTestCase {
         }
     }
 
+    func testCodexSubscriptionPresetNeedsNoAPIKey() {
+        let p = LLMPresets.match(endpoint: LLMPresets.codexCLIEndpoint)
+        XCTAssertEqual(p.name, "Codex (ChatGPT 구독)")
+        XCTAssertFalse(p.requiresAPIKey)
+        XCTAssertTrue(LLMPresets.isCodexCLI("codex-cli://exec"))
+        XCTAssertFalse(LLMPresets.isCodexCLI("https://api.openai.com/v1/chat/completions"))
+        XCTAssertFalse(LLMPresets.requiresAPIKey(endpoint: LLMPresets.codexCLIEndpoint))
+    }
+
+    func testCLIPromptCarriesTranscriptAndNoToolInstruction() {
+        let p = PromptBuilder.cliPrompt(transcript: "어 내일 미팅", instruction: "정리해줘", glossary: ["그루비룸"])
+        XCTAssertTrue(p.contains("<transcript>어 내일 미팅</transcript>"))
+        XCTAssertTrue(p.contains("정리해줘"))
+        XCTAssertTrue(p.contains("그루비룸"))
+        XCTAssertTrue(p.contains("도구를 쓰지 말고"))
+    }
+
     func testRetiredOpenAIModelsMigrateToLuna() {
         let ep = "https://api.openai.com/v1/chat/completions"
         for old in ["gpt-4.1-nano", "gpt-5-nano", "gpt-4o-mini"] {
@@ -635,5 +652,42 @@ final class STTPresetTests: XCTestCase {
     func testEveryPresetHasAUniqueName() {
         let names = STTPresets.all.map(\.name)
         XCTAssertEqual(names.count, Set(names).count)
+    }
+}
+
+final class SystemRecordingSettingsTests: XCTestCase {
+    func testLegacySettingsGainSystemRecordingDefaults() throws {
+        let s = try XCTUnwrap(AppSettings.decoded(from: Data("{}".utf8)))
+        XCTAssertEqual(s.systemRecordingHotkeyKeyCode, 97)     // F6
+        XCTAssertEqual(s.systemRecordingHotkeyModifiers, 0)
+        XCTAssertTrue(s.revealRecordingOnFinish)
+    }
+
+    func testRoundTripKeepsSystemRecordingFields() throws {
+        var s = AppSettings()
+        s.systemRecordingHotkeyKeyCode = 98
+        s.revealRecordingOnFinish = false
+        let back = try XCTUnwrap(AppSettings.decoded(from: try s.encoded()))
+        XCTAssertEqual(back.systemRecordingHotkeyKeyCode, 98)
+        XCTAssertFalse(back.revealRecordingOnFinish)
+    }
+
+    func testDefaultsDoNotCollide() {
+        let s = AppSettings()
+        // F5(녹음) / F6(시스템 소리) / 프로파일 기본 단축키는 서로 달라야 한다
+        XCTAssertNotEqual(s.recordingHotkeyKeyCode, s.systemRecordingHotkeyKeyCode)
+        XCTAssertNil(HotkeyRules.conflictOwner(keyCode: s.systemRecordingHotkeyKeyCode,
+                                               modifiers: s.systemRecordingHotkeyModifiers,
+                                               in: s, excludingSystemRecording: true))
+        XCTAssertNil(HotkeyRules.rejectionReason(keyCode: s.systemRecordingHotkeyKeyCode,
+                                                 modifiers: s.systemRecordingHotkeyModifiers))
+    }
+
+    func testProfileCannotTakeSystemRecordingKey() {
+        let s = AppSettings()
+        XCTAssertEqual(HotkeyRules.conflictOwner(keyCode: 97, modifiers: 0, in: s,
+                                                 excludingProfileID: s.profiles[0].id,
+                                                 systemRecordingName: "F6 시스템 소리 녹음"),
+                       "F6 시스템 소리 녹음")
     }
 }

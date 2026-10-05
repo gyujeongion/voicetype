@@ -114,6 +114,13 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                if vm.llmUsesCodexCLI {
+                    Text(t("llm.codex.note"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !vm.llmUsesCodexCLI {
                 LabeledRow(t("prompts.llm.endpoint")) {
                     TextField(vm.llmUsesLocalEndpoint ? "http://127.0.0.1:11434/v1/chat/completions" : "https://…/v1/chat/completions",
                               text: $vm.settings.llm.endpoint)
@@ -121,6 +128,8 @@ struct SettingsView: View {
                         .onChange(of: vm.settings.llm.endpoint) { _, _ in
                             vm.reloadLLMKeyForCurrentEndpoint()
                         }
+                }
+
                 }
 
                 LabeledRow(t("prompts.llm.model")) {
@@ -144,9 +153,11 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                if !vm.llmUsesCodexCLI {
                 LabeledRow(vm.llmNeedsAPIKey ? t("prompts.llm.apikey") : t("llm.apikey.optional")) {
                     SecureField(vm.llmUsesLocalEndpoint ? t("llm.apikey.placeholder.optional") : "", text: $vm.llmKey)
                         .labelsHidden()
+                }
                 }
 
                 HStack {
@@ -382,6 +393,37 @@ struct SettingsView: View {
                     Label(t("hotkey.registration.failed"), systemImage: "exclamationmark.triangle.fill")
                         .font(.caption).foregroundStyle(.orange)
                 }
+
+                HStack {
+                    Text(t("recorder.system.hotkey"))
+                    Spacer()
+                    Button(vm.capturingSystemRecordingHotkey ? t("prompts.profile.hotkey.cancel") : vm.systemRecordingHotkeyDisplay) {
+                        vm.capturingSystemRecordingHotkey.toggle()
+                    }
+                    .frame(minWidth: 110)
+                    .background(
+                        Group {
+                            if vm.capturingSystemRecordingHotkey {
+                                HotkeyCaptureView(
+                                    onCapture: { keyCode, mods in vm.applySystemRecordingHotkey(keyCode: keyCode, modifiers: mods) },
+                                    onCancel: { vm.capturingSystemRecordingHotkey = false }
+                                )
+                                .opacity(0)
+                            }
+                        }
+                    )
+                }
+                if let message = vm.systemRecordingHotkeyMessage {
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                } else if vm.systemRecordingHotkeyRegistrationFailed {
+                    Label(t("hotkey.registration.failed"), systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                Text(t("recorder.system.note"))
+                    .font(.caption).foregroundStyle(.secondary)
+
+                Toggle(t("recorder.reveal"), isOn: $vm.settings.revealRecordingOnFinish)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -932,6 +974,7 @@ private struct RecordingRow: View {
 
     private var badgeKey: String.LocalizationValue {
         let kinds = Set(entry.session.tracks.map(\.kind))
+        if kinds == [.system] { return "history.f5.system.only" }   // F6: 컴퓨터 소리만
         if kinds.contains(.mixed) { return "history.f5.mixed" }
         if kinds.contains(.system) { return "history.f5.mixed" }
         if kinds.contains(.mic) { return "history.f5.mic.only" }

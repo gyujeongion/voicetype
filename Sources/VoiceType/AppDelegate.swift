@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     static let recordingHotkeyID: UInt32 = 9000
     /// 받아쓰기 녹음 중에만 잠깐 잡는 Esc(취소) 핫키 id. 녹음이 아닐 땐 Esc를 가로채지 않는다.
     static let cancelHotkeyID: UInt32 = 9001
+    /// F6 시스템 소리만 녹음 핫키 id
+    static let systemRecordingHotkeyID: UInt32 = 9002
     private var elapsedTimer: Timer?
     private let hotkey = HotkeyManager()
     private let spaceTrigger = SpaceBarTrigger()
@@ -197,13 +199,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         recorder.onActionNeeded = { [weak self] issue in self?.notifyActionable(issue) }
         recorder.onMicLevel = { [weak self] level in self?.indicator.setLevel(level) }
         recorder.onSystemLevel = { [weak self] level in
-            self?.indicator.setShowsSecondaryLevel(true)
-            self?.indicator.setSecondaryLevel(level)
+            guard let self = self else { return }
+            if self.recorder.mode == .systemOnly {
+                self.indicator.setLevel(level)   // 마이크가 없으니 시스템 레벨이 주 막대
+            } else {
+                self.indicator.setShowsSecondaryLevel(true)
+                self.indicator.setSecondaryLevel(level)
+            }
         }
-        recorder.onFinished = { [weak self] _ in
-            // Finder 자동 팝업 폐기(2026-08-17) — 설정 > 히스토리 탭에서 목록으로 확인,
-            // 필요할 때만 버튼으로 Finder 연결. RecordingStore가 이미 갱신을 발행한다.
-            self?.notify(self?.l.text("recorder.finished.notify") ?? "녹음이 저장됐습니다.", kind: .info)
+        recorder.onFinished = { [weak self] folder in
+            guard let self = self else { return }
+            if SettingsStore.shared.settings.revealRecordingOnFinish {
+                // 사용자 요청(2026-10-06): 녹음이 끝나면 파일 위치를 Finder로 바로 보여준다.
+                // 8/17에 자동 팝업을 없앴다가 되돌렸으므로 설정(기본 켬)으로 끌 수 있다.
+                let audio = RecordingStore.shared.entries.first { $0.folder == folder }?.primaryAudioURL
+                NSWorkspace.shared.activateFileViewerSelecting([audio ?? folder])
+            } else {
+                self.notify(self.l.text("recorder.finished.notify"), kind: .info)
+            }
         }
     }
 
@@ -278,14 +291,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.notify(self.l.text("dictation.cancelled"), kind: .info)
                 return
             }
-            if id == Self.recordingHotkeyID {
+            if id == Self.recordingHotkeyID || id == Self.systemRecordingHotkeyID {
                 // 받아쓰기가 마이크를 점유/처리 중일 때 F5 녹음을 새로 시작하면 자원이 충돌한다.
                 // (반대 방향 — 녹음 중 받아쓰기 차단 — 은 바로 아래에서 처리)
                 if !self.recorder.isRecording && self.dictation.isActive {
                     self.notify(self.l.text("recorder.blocked_by_dictation"))
                     return
                 }
-                self.recorder.toggle()
+                self.recorder.toggle(mode: id == Self.systemRecordingHotkeyID ? .systemOnly : .micAndSystem)
                 return
             }
             // 녹음이 마이크를 점유하는 동안에는 받아쓰기를 막는다
@@ -300,7 +313,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         hotkey.onRelease = { [weak self] id in
             guard let self = self else { return }
-            if id == Self.recordingHotkeyID || id == Self.cancelHotkeyID { return }   // 토글/취소는 release를 쓰지 않는다
+            if id == Self.recordingHotkeyID || id == Self.cancelHotkeyID || id == Self.systemRecordingHotkeyID { return }   // 토글/취소는 release를 쓰지 않는다
             let profiles = SettingsStore.shared.settings.profiles
             let idx = Int(id)
             guard idx >= 0, idx < profiles.count else { return }
@@ -350,6 +363,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         keys.append((id: Self.recordingHotkeyID,
                      keyCode: s.recordingHotkeyKeyCode,
                      modifiers: s.recordingHotkeyModifiers))
+        keys.append((id: Self.systemRecordingHotkeyID,
+                     keyCode: s.systemRecordingHotkeyKeyCode,
+                     modifiers: s.systemRecordingHotkeyModifiers))
         let failed = hotkey.registerAll(keys)
         // 매 설정 변경마다 불리므로 값이 바뀔 때만 발행 (불필요한 SwiftUI 재그리기 방지)
         if settingsVM.failedHotkeyIDs != failed { settingsVM.failedHotkeyIDs = failed }
@@ -395,6 +411,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         recorder.toggle()
+    }
+
+    @objc private func toggleSystemRecorderAction() {
+        if !recorder.isRecording && dictation.isActive {
+            notify(l.text("recorder.blocked_by_dictation"))
+            return
+        }
+        recorder.toggle(mode: .systemOnly)
     }
 
     @objc private func copyLastResult() {
@@ -491,13 +515,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
-        // F5 회의 녹음
+        // F5 회의 녹음 / F6 시스템 소리만
         menu.addItem(.separator())
-        let recTitle = (recorder.isRecording ? l.text("menu.recorder.stop") : l.text("menu.recorder.start"))
-            + shortcut(settings.recordingHotkeyKeyCode, settings.recordingHotkeyModifiers)
-        let rec = item(recTitle, #selector(toggleRecorderAction))
-        rec.isEnabled = recorder.state == .idle || recorder.state == .recording
-        menu.addItem(rec)
+        if recorder.isRecording {
+            let stop = item(l.text("menu.recorder.stop"), #selector(toggleRecorderAction))
+            menu.addItem(stop)
+        } else {
+            let idle = recorder.state == .idle
+            let rec = item(l.text("menu.recorder.start") + shortcut(settings.recordingHotkeyKeyCode, settings.recordingHotkeyModifiers),
+                           #selector(toggleRecorderAction))
+            rec.isEnabled = idle
+            menu.addItem(rec)
+            let sys = item(l.text("menu.recorder.system.start") + shortcut(settings.systemRecordingHotkeyKeyCode, settings.systemRecordingHotkeyModifiers),
+                           #selector(toggleSystemRecorderAction))
+            sys.isEnabled = idle
+            menu.addItem(sys)
+        }
         menu.addItem(item(l.text("menu.recorder.folder"), #selector(openRecordingFolderAction)))
 
         // 마지막 결과 — 자동 붙여넣기를 놓쳤을 때 메뉴에서 바로 복사

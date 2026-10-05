@@ -102,6 +102,11 @@ public struct AppSettings: Codable, Sendable {
     public var recordingHotkeyModifiers: UInt32
     /// 녹음 회차 폴더 루트. 빈 문자열이면 기본값(~/Documents/VoiceType Recordings).
     public var recordingFolderPath: String
+    /// F6: 시스템(컴퓨터) 소리만 녹음 — 마이크 없이. 97 = F6.
+    public var systemRecordingHotkeyKeyCode: UInt32
+    public var systemRecordingHotkeyModifiers: UInt32
+    /// 녹음 완료 시 Finder에서 녹음 파일 위치를 바로 보여줄지
+    public var revealRecordingOnFinish: Bool
 
     public init(profiles: [PromptProfile]? = nil,
                 microphonePriority: [String] = [],
@@ -121,7 +126,10 @@ public struct AppSettings: Codable, Sendable {
                 saveRecordings: Bool = true,
                 recordingHotkeyKeyCode: UInt32 = 96,
                 recordingHotkeyModifiers: UInt32 = 0,
-                recordingFolderPath: String = "") {
+                recordingFolderPath: String = "",
+                systemRecordingHotkeyKeyCode: UInt32 = 97,
+                systemRecordingHotkeyModifiers: UInt32 = 0,
+                revealRecordingOnFinish: Bool = true) {
         self.profiles = profiles ?? AppSettings.defaultProfiles
         self.microphonePriority = microphonePriority
         self.selectedMicrophoneUID = selectedMicrophoneUID
@@ -141,6 +149,9 @@ public struct AppSettings: Codable, Sendable {
         self.recordingHotkeyKeyCode = recordingHotkeyKeyCode
         self.recordingHotkeyModifiers = recordingHotkeyModifiers
         self.recordingFolderPath = recordingFolderPath
+        self.systemRecordingHotkeyKeyCode = systemRecordingHotkeyKeyCode
+        self.systemRecordingHotkeyModifiers = systemRecordingHotkeyModifiers
+        self.revealRecordingOnFinish = revealRecordingOnFinish
     }
 
     enum CodingKeys: String, CodingKey {
@@ -149,6 +160,7 @@ public struct AppSettings: Codable, Sendable {
         case spaceBarTrigger, spaceBarThreshold, spaceBarProfileID, spaceBarExcludedAppBundleIDs
         case indicatorStyle, saveRecordings
         case recordingHotkeyKeyCode, recordingHotkeyModifiers, recordingFolderPath
+        case systemRecordingHotkeyKeyCode, systemRecordingHotkeyModifiers, revealRecordingOnFinish
     }
 
     // 관대한 디코딩 — 향후 필드 추가/변경에도 기존 설정(특히 프로파일)을 최대한 보존
@@ -175,6 +187,9 @@ public struct AppSettings: Codable, Sendable {
         recordingHotkeyKeyCode = (try? c.decode(UInt32.self, forKey: .recordingHotkeyKeyCode)) ?? 96
         recordingHotkeyModifiers = (try? c.decode(UInt32.self, forKey: .recordingHotkeyModifiers)) ?? 0
         recordingFolderPath = (try? c.decode(String.self, forKey: .recordingFolderPath)) ?? ""
+        systemRecordingHotkeyKeyCode = (try? c.decode(UInt32.self, forKey: .systemRecordingHotkeyKeyCode)) ?? 97
+        systemRecordingHotkeyModifiers = (try? c.decode(UInt32.self, forKey: .systemRecordingHotkeyModifiers)) ?? 0
+        revealRecordingOnFinish = (try? c.decode(Bool.self, forKey: .revealRecordingOnFinish)) ?? true
     }
 
     /// Default profiles: Option+Space for dictation, Option+Shift+Space for English translation.

@@ -177,6 +177,10 @@ final class SettingsViewModel: ObservableObject {
         currentLLMPreset.requiresAPIKey
     }
 
+    var llmUsesCodexCLI: Bool {
+        LLMPresets.isCodexCLI(settings.llm.endpoint)
+    }
+
     var llmUsesLocalEndpoint: Bool {
         LLMPresets.isLocalEndpoint(settings.llm.endpoint)
     }
@@ -442,6 +446,32 @@ final class SettingsViewModel: ObservableObject {
 
     @Published var recordingFolderMessage: String?
 
+    // F6 시스템 소리 녹음 단축키 캡처
+    @Published var capturingSystemRecordingHotkey = false
+    @Published var systemRecordingHotkeyMessage: String?
+
+    var systemRecordingHotkeyDisplay: String {
+        settings.systemRecordingHotkeyKeyCode == 0
+            ? LocalizationManager.shared.text("prompts.profile.unassigned")
+            : KeyNames.display(keyCode: settings.systemRecordingHotkeyKeyCode, modifiers: settings.systemRecordingHotkeyModifiers)
+    }
+
+    var systemRecordingHotkeyRegistrationFailed: Bool {
+        failedHotkeyIDs.contains(AppDelegate.systemRecordingHotkeyID)
+    }
+
+    func applySystemRecordingHotkey(keyCode: UInt32, modifiers: UInt32) {
+        capturingSystemRecordingHotkey = false
+        if let reason = hotkeyProblem(keyCode: keyCode, modifiers: modifiers, profileID: nil,
+                                      isRecording: false, isSystemRecording: true) {
+            systemRecordingHotkeyMessage = reason
+            return
+        }
+        systemRecordingHotkeyMessage = nil
+        settings.systemRecordingHotkeyKeyCode = keyCode
+        settings.systemRecordingHotkeyModifiers = modifiers
+    }
+
     // MARK: - 프로파일 단축키 캡처
 
     func startCapturingHotkey(for id: UUID) {
@@ -466,13 +496,16 @@ final class SettingsViewModel: ObservableObject {
     }
 
     /// 단축키를 지정할 수 없는 사유 (타자 가로채기·다른 프로파일/녹음과 중복). 없으면 nil.
-    func hotkeyProblem(keyCode: UInt32, modifiers: UInt32, profileID: UUID?, isRecording: Bool) -> String? {
+    func hotkeyProblem(keyCode: UInt32, modifiers: UInt32, profileID: UUID?, isRecording: Bool,
+                       isSystemRecording: Bool = false) -> String? {
         if let reason = HotkeyRules.rejectionReason(keyCode: keyCode, modifiers: modifiers) { return reason }
         let recordingName = LocalizationManager.shared.text("recorder.name")
         if let owner = HotkeyRules.conflictOwner(keyCode: keyCode, modifiers: modifiers, in: settings,
                                                  excludingProfileID: profileID,
                                                  excludingRecording: isRecording,
-                                                 recordingName: recordingName) {
+                                                 excludingSystemRecording: isSystemRecording,
+                                                 recordingName: recordingName,
+                                                 systemRecordingName: LocalizationManager.shared.text("recorder.system.name")) {
             return String(format: LocalizationManager.shared.text("hotkey.conflict"),
                           KeyNames.display(keyCode: keyCode, modifiers: modifiers), owner)
         }
