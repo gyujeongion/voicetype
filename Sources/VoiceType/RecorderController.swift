@@ -13,6 +13,9 @@ final class RecorderController {
     /// F5 = 마이크+컴퓨터 소리, F6 = 컴퓨터 소리만(마이크 안 씀)
     enum Mode { case micAndSystem, systemOnly }
     private(set) var mode: Mode = .micAndSystem
+    /// F6는 시스템 스트림이 실제로 시작된 뒤에야 .recording이 된다(수 초 걸릴 수 있음). 그 사이에
+    /// 종료 키를 누르면 예전엔 조용히 무시돼 녹음이 계속됐다 — 요청을 기억했다가 시작 직후 종료한다.
+    private var stopWhenReady = false
 
     private(set) var state: State = .idle
 
@@ -56,9 +59,12 @@ final class RecorderController {
         switch state {
         case .idle:
             self.mode = mode
+            stopWhenReady = false
             start()
         case .recording: Task { await stop() }
-        default:         break   // starting/stopping/finalizing 중엔 무시
+        case .starting:
+            if self.mode == .systemOnly { stopWhenReady = true }   // 매개변수 mode가 아니라 현재 녹음 모드
+        default:         break   // stopping/finalizing 중엔 무시
         }
     }
 
@@ -135,6 +141,10 @@ final class RecorderController {
         power.acquire(reason: "VoiceType 시스템 소리 녹음 중")
         startDiskWatch()
         setState(.recording)
+        if stopWhenReady {
+            stopWhenReady = false
+            await stop()
+        }
     }
 
     private func beginRecording() {

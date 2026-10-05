@@ -213,10 +213,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 // 사용자 요청(2026-10-06): 녹음이 끝나면 파일 위치를 Finder로 바로 보여준다.
                 // 8/17에 자동 팝업을 없앴다가 되돌렸으므로 설정(기본 켬)으로 끌 수 있다.
                 let audio = RecordingStore.shared.entries.first { $0.folder == folder }?.primaryAudioURL
-                NSWorkspace.shared.activateFileViewerSelecting([audio ?? folder])
+                Self.revealInFinderFront(audio ?? folder)
             } else {
                 self.notify(self.l.text("recorder.finished.notify"), kind: .info)
             }
+        }
+    }
+
+    /// Finder에서 파일을 선택한 창을 **맨 앞으로** 띄운다. 메뉴바 앱이 직접
+    /// activateFileViewerSelecting을 부르면 Finder가 뒤에 열리거나 안 열릴 때가 있어(실측 2026-10-06),
+    /// 런치서비스(`open -R`)를 거쳐 항상 활성화되게 한다.
+    static func revealInFinderFront(_ url: URL) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        p.arguments = ["-R", url.path]
+        do { try p.run() } catch {
+            NSWorkspace.shared.activateFileViewerSelecting([url])   // 폴백
         }
     }
 
