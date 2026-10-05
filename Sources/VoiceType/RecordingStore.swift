@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 import VoiceTypeCore
 
 /// 녹음 회차 폴더와 manifest를 관리한다.
@@ -26,6 +27,18 @@ final class RecordingStore: ObservableObject {
         }
     }
 
+    /// F6 시스템 소리 녹음 1건 — 세션 폴더·json 없이 m4a 파일 하나가 전부다.
+    struct Clip: Identifiable, Equatable {
+        let url: URL
+        let startedAt: Date
+        let durationSeconds: Double
+        var id: String { url.lastPathComponent }
+    }
+
+    /// F6 파일들이 쌓이는 단일 폴더 (회차 폴더 루트 바로 아래).
+    static let systemClipsFolderName = "System Audio"
+    var systemClipsURL: URL { rootURL.appendingPathComponent(Self.systemClipsFolderName, isDirectory: true) }
+
     /// 회차 폴더들이 놓이는 루트. 설정에서 변경 가능.
     var rootURL: URL {
         didSet { refresh() }
@@ -33,6 +46,8 @@ final class RecordingStore: ObservableObject {
 
     /// GUI(History 탭)가 구독하는 전체 회차 목록. 최신순.
     @Published private(set) var entries: [Entry] = []
+    /// GUI(History 탭)용 F6 파일 목록. 최신순.
+    @Published private(set) var clips: [Clip] = []
 
     private let fm = FileManager.default
 
@@ -43,6 +58,7 @@ final class RecordingStore: ObservableObject {
 
     /// 디스크를 다시 스캔해 `entries`를 갱신한다. 녹음 종료 직후·루트 변경 시 호출.
     func refresh() {
+        refreshClips()
         guard let items = try? fm.contentsOfDirectory(at: rootURL,
                                                        includingPropertiesForKeys: [.isDirectoryKey],
                                                        options: [.skipsHiddenFiles]) else {
@@ -55,6 +71,54 @@ final class RecordingStore: ObservableObject {
                   let session = try? load(from: folder) else { return nil }
             return Entry(session: session, folder: folder)
         }.sorted { $0.session.startedAt > $1.session.startedAt }
+    }
+
+    private func refreshClips() {
+        guard let files = try? fm.contentsOfDirectory(at: systemClipsURL,
+                                                      includingPropertiesForKeys: [.creationDateKey],
+                                                      options: [.skipsHiddenFiles]) else {
+            clips = []
+            return
+        }
+        clips = files.filter { $0.pathExtension.lowercased() == "m4a" }.map { url -> Clip in
+            let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
+            let date = SystemClipName.parse(url.lastPathComponent) ?? created ?? .distantPast
+            var seconds = 0.0
+            if let f = try? AVAudioFile(forReading: url), f.fileFormat.sampleRate > 0 {
+                seconds = Double(f.length) / f.fileFormat.sampleRate
+            }
+            return Clip(url: url, startedAt: date, durationSeconds: seconds)
+        }.sorted { $0.startedAt > $1.startedAt }
+    }
+
+    /// 새 F6 녹음의 파일 위치. 같은 초에 겹치면 " (2)"를 붙인다.
+    func newSystemClipTarget(at date: Date = Date()) throws -> (caf: URL, m4a: URL) {
+        try fm.createDirectory(at: systemClipsURL, withIntermediateDirectories: true)
+        let base = SystemClipName.make(from: date)
+        var name = base
+        var n = 2
+        while fm.fileExists(atPath: systemClipsURL.appendingPathComponent(name + ".m4a").path)
+                || fm.fileExists(atPath: systemClipsURL.appendingPathComponent(name + ".caf").path) {
+            name = "\(base) (\(n))"
+            n += 1
+        }
+        return (systemClipsURL.appendingPathComponent(name + ".caf"),
+                systemClipsURL.appendingPathComponent(name + ".m4a"))
+    }
+
+    /// 파일을 휴지통으로 옮긴다 (영구 삭제 아님).
+    @discardableResult
+    func moveToTrash(_ clip: Clip) -> String? {
+        defer { refresh() }
+        do { try fm.trashItem(at: clip.url, resultingItemURL: nil); return nil }
+        catch { return error.localizedDescription }
+    }
+
+    /// 크래시·강제종료로 m4a가 못 된 F6 녹음(.caf)을 찾는다. 지금 녹음 중인 파일은 제외한다.
+    func orphanSystemClipCAFs(excluding active: URL?) -> [URL] {
+        guard let files = try? fm.contentsOfDirectory(at: systemClipsURL, includingPropertiesForKeys: nil,
+                                                      options: [.skipsHiddenFiles]) else { return [] }
+        return files.filter { $0.pathExtension.lowercased() == "caf" && $0 != active }
     }
 
     /// 회차 폴더를 휴지통으로 옮긴다. 회의 녹음은 되돌릴 수 없으면 안 되므로 영구 삭제하지 않는다.

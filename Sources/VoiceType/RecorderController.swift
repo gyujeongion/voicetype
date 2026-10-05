@@ -16,6 +16,8 @@ final class RecorderController {
     /// F6는 시스템 스트림이 실제로 시작된 뒤에야 .recording이 된다(수 초 걸릴 수 있음). 그 사이에
     /// 종료 키를 누르면 예전엔 조용히 무시돼 녹음이 계속됐다 — 요청을 기억했다가 시작 직후 종료한다.
     private var stopWhenReady = false
+    /// F6 진행 중 파일 위치 — 세션 폴더·json 없이 caf(녹음 중)→m4a(완료) 하나뿐
+    private var clipTarget: (caf: URL, m4a: URL)?
 
     private(set) var state: State = .idle
 
@@ -104,6 +106,7 @@ final class RecorderController {
     }
 
     /// F6 — 컴퓨터 소리만. 시스템 트랙이 시작 못 하면 녹음 자체가 실패다(마이크 폴백 없음).
+    /// 저장 형태: `<녹음 폴더>/시스템 소리/2026-10-06 04-45-12.m4a` — 폴더·json 없이 파일 하나.
     private func beginSystemOnly() async {
         guard await SystemTrackRecorder.hasPermission() else {
             onActionNeeded?(.screenRecordingDenied)
@@ -111,9 +114,9 @@ final class RecorderController {
             return
         }
         let now = Date()
-        let created: (session: RecordingSession, folder: URL)
+        let target: (caf: URL, m4a: URL)
         do {
-            created = try store.createSession(startedAt: now)
+            target = try store.newSystemClipTarget(at: now)
         } catch {
             onError?("녹음 폴더 생성 실패: \(error.localizedDescription)")
             setState(.idle)
@@ -127,15 +130,14 @@ final class RecorderController {
             MainActor.assumeIsolated { self?.onError?(msg) }
         }
         do {
-            try await rec.start(to: created.folder.appendingPathComponent("system.caf"), sessionStartedAt: now)
+            try await rec.start(to: target.caf, sessionStartedAt: now)
         } catch {
-            try? FileManager.default.removeItem(at: created.folder)
+            try? FileManager.default.removeItem(at: target.caf)
             onError?("컴퓨터 소리 녹음을 시작하지 못했습니다.\n\(error.localizedDescription)")
             setState(.idle)
             return
         }
-        session = created.session
-        folder = created.folder
+        clipTarget = target
         startedAt = now
         system = rec
         power.acquire(reason: "VoiceType 시스템 소리 녹음 중")
@@ -145,6 +147,39 @@ final class RecorderController {
             stopWhenReady = false
             await stop()
         }
+    }
+
+    /// F6 종료: caf를 m4a 하나로 마감하고 caf를 지운다. json·세션 폴더는 만들지 않는다.
+    private func stopSystemOnly() async {
+        guard state == .recording, let target = clipTarget else { return }
+        setState(.stopping)
+        diskTimer?.invalidate(); diskTimer = nil
+        power.release()
+        let sys = await system?.stop()
+        system = nil
+        setState(.finalizing)
+
+        var finalURL: URL?
+        if let sys = sys, sys.durationSeconds > 0, FileManager.default.fileExists(atPath: target.caf.path) {
+            do {
+                try await AudioTranscoder.toM4A(from: target.caf, to: target.m4a)
+                try? FileManager.default.removeItem(at: target.caf)
+                finalURL = target.m4a
+            } catch {
+                // 변환 실패해도 녹음은 잃지 않는다 — caf 그대로 둔다(다음 실행 때 다시 변환 시도)
+                onError?("m4a 변환에 실패해 원본(caf)을 그대로 보관합니다.\n\(error.localizedDescription)")
+                finalURL = target.caf
+            }
+        } else {
+            try? FileManager.default.removeItem(at: target.caf)
+            onError?("녹음된 소리가 없어 파일을 만들지 않았습니다.")
+        }
+
+        clipTarget = nil
+        startedAt = nil
+        store.refresh()
+        setState(.idle)
+        if let url = finalURL { onFinished?(url) }
     }
 
     private func beginRecording() {
@@ -247,6 +282,7 @@ final class RecorderController {
     // MARK: - 종료
 
     private func stop() async {
+        if mode == .systemOnly { await stopSystemOnly(); return }
         guard state == .recording, let folder = folder, var session = session else { return }
         setState(.stopping)
         diskTimer?.invalidate(); diskTimer = nil
@@ -359,9 +395,9 @@ final class RecorderController {
     /// 크래시로 남은 CAF는 마지막 바이트까지 유효하므로 그대로 변환하면 된다.
     @discardableResult
     func recoverIncompleteSessions() async -> Int {
+        var recovered = await recoverSystemClips()
         let pending = store.incompleteSessions()
-        guard !pending.isEmpty else { return 0 }
-        var recovered = 0
+        guard !pending.isEmpty else { return recovered }
         for (var s, folder) in pending {
             var tracks: [TrackInfo] = []
             for kind in TrackKind.allCases {
@@ -389,6 +425,20 @@ final class RecorderController {
         }
         store.refresh()
         return recovered
+    }
+
+    /// F6 녹음 중 크래시로 m4a가 못 된 caf를 m4a로 마감한다 (json이 없으니 폴더 스캔이 전부).
+    private func recoverSystemClips() async -> Int {
+        var n = 0
+        for caf in store.orphanSystemClipCAFs(excluding: clipTarget?.caf) {
+            let m4a = caf.deletingPathExtension().appendingPathExtension("m4a")
+            if (try? await AudioTranscoder.toM4A(from: caf, to: m4a)) != nil {
+                try? FileManager.default.removeItem(at: caf)
+                n += 1
+            }
+        }
+        if n > 0 { store.refresh() }
+        return n
     }
 
     /// 오디오 길이를 파일에서 직접 읽는다 (크래시로 manifest에 안 남은 경우).

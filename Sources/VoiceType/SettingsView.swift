@@ -653,9 +653,15 @@ struct SettingsView: View {
     @State private var historyKind: HistoryKind = .dictation
     @State private var historyQuery = ""
     @State private var confirmClearHistory = false
-    @State private var recordingPendingDelete: RecordingStore.Entry?
+    @State private var recordingPendingDelete: RecordingItem?
     @State private var recordingDeleteError: String?
     @ObservedObject private var player = AudioPreviewPlayer.shared
+
+    /// F5 회차 폴더(마이크+시스템)와 F6 단일 m4a 파일을 시간순으로 한 목록에 합친다.
+    private var recordingItems: [RecordingItem] {
+        (recordings.entries.map(RecordingItem.session) + recordings.clips.map(RecordingItem.clip))
+            .sorted { $0.date > $1.date }
+    }
 
     private var historyTab: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -683,7 +689,7 @@ struct SettingsView: View {
 
             Picker("", selection: $historyKind) {
                 Text(String(format: t("history.kind.dictation"), history.entries.count)).tag(HistoryKind.dictation)
-                Text(String(format: t("history.kind.recordings"), recordings.entries.count)).tag(HistoryKind.recordings)
+                Text(String(format: t("history.kind.recordings"), recordingItems.count)).tag(HistoryKind.recordings)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -697,25 +703,28 @@ struct SettingsView: View {
                 // 녹음에는 텍스트가 없어 검색 대상이 아니다 — 녹음 구역엔 검색창을 적용하지 않는다
                 if historyKind == .recordings {
                     Section {
-                        if recordings.entries.isEmpty {
+                        if recordingItems.isEmpty {
                             Text(t("history.f5.empty"))
                                 .foregroundStyle(.secondary)
                         } else {
-                            ForEach(recordings.entries) { entry in
-                                RecordingRow(entry: entry,
-                                             isPlaying: player.isPlaying(entry.primaryAudioURL),
+                            ForEach(recordingItems) { item in
+                                RecordingRow(startedAt: item.date,
+                                             durationSeconds: item.durationSeconds,
+                                             badgeKey: item.badgeKey,
+                                             hasAudio: item.audioURL != nil,
+                                             isPlaying: player.isPlaying(item.audioURL),
                                              onPlay: {
-                                                 if let url = entry.primaryAudioURL { player.toggle(url) }
+                                                 if let url = item.audioURL { player.toggle(url) }
                                              },
                                              onReveal: {
-                                                 NSWorkspace.shared.activateFileViewerSelecting([entry.primaryAudioURL ?? entry.folder])
+                                                 NSWorkspace.shared.activateFileViewerSelecting([item.audioURL ?? item.revealURL])
                                              },
                                              onCopyPath: {
-                                                 if let url = entry.primaryAudioURL {
+                                                 if let url = item.audioURL {
                                                      TextInjector.copyToClipboard(url.path)
                                                  }
                                              },
-                                             onDelete: { recordingPendingDelete = entry })
+                                             onDelete: { recordingPendingDelete = item })
                             }
                         }
                         if let err = recordingDeleteError {
@@ -780,17 +789,20 @@ struct SettingsView: View {
                             isPresented: Binding(get: { recordingPendingDelete != nil },
                                                  set: { if !$0 { recordingPendingDelete = nil } })) {
             Button(t("history.f5.delete.trash"), role: .destructive) {
-                if let entry = recordingPendingDelete {
-                    if player.isPlaying(entry.primaryAudioURL) { player.stop() }
-                    recordingDeleteError = recordings.moveToTrash(entry).map {
-                        String(format: t("history.f5.delete.failed"), $0)
+                if let item = recordingPendingDelete {
+                    if player.isPlaying(item.audioURL) { player.stop() }
+                    let failure: String?
+                    switch item {
+                    case .session(let entry): failure = recordings.moveToTrash(entry)
+                    case .clip(let clip):     failure = recordings.moveToTrash(clip)
                     }
+                    recordingDeleteError = failure.map { String(format: t("history.f5.delete.failed"), $0) }
                 }
                 recordingPendingDelete = nil
             }
         } message: {
-            if let entry = recordingPendingDelete {
-                Text(entry.session.startedAt, format: .dateTime.month().day().hour().minute())
+            if let item = recordingPendingDelete {
+                Text(item.date, format: .dateTime.month().day().hour().minute())
             }
         }
     }
@@ -959,8 +971,60 @@ private struct HistoryRow: View {
 
 /// F5 녹음 회차 1건. mixed(마이크+시스템 병합) 또는 mic만 있을 수 있다.
 /// 병합 실패 시 폴백으로 mic+system이 개별 트랙으로 같이 들어올 수도 있다.
+/// 히스토리의 녹음 1건 — F5(회차 폴더) 또는 F6(단일 m4a)
+private enum RecordingItem: Identifiable {
+    case session(RecordingStore.Entry)
+    case clip(RecordingStore.Clip)
+
+    var id: String {
+        switch self {
+        case .session(let e): return "s-" + e.id
+        case .clip(let c):    return "c-" + c.id
+        }
+    }
+    var date: Date {
+        switch self {
+        case .session(let e): return e.session.startedAt
+        case .clip(let c):    return c.startedAt
+        }
+    }
+    var durationSeconds: Double {
+        switch self {
+        case .session(let e): return e.session.durationSeconds
+        case .clip(let c):    return c.durationSeconds
+        }
+    }
+    var audioURL: URL? {
+        switch self {
+        case .session(let e): return e.primaryAudioURL
+        case .clip(let c):    return c.url
+        }
+    }
+    var revealURL: URL {
+        switch self {
+        case .session(let e): return e.folder
+        case .clip(let c):    return c.url
+        }
+    }
+    var badgeKey: String.LocalizationValue {
+        switch self {
+        case .clip: return "history.f5.system.only"      // F6: 컴퓨터 소리만
+        case .session(let e):
+            let kinds = Set(e.session.tracks.map(\.kind))
+            if kinds == [.system] { return "history.f5.system.only" }   // 구버전 F6(폴더형)
+            if kinds.contains(.mixed) { return "history.f5.mixed" }
+            if kinds.contains(.system) { return "history.f5.mixed" }
+            if kinds.contains(.mic) { return "history.f5.mic.only" }
+            return "history.f5.failed"
+        }
+    }
+}
+
 private struct RecordingRow: View {
-    let entry: RecordingStore.Entry
+    let startedAt: Date
+    let durationSeconds: Double
+    let badgeKey: String.LocalizationValue
+    let hasAudio: Bool
     var isPlaying: Bool = false
     var onPlay: () -> Void = {}
     let onReveal: () -> Void
@@ -972,20 +1036,11 @@ private struct RecordingRow: View {
         localization.text(key)
     }
 
-    private var badgeKey: String.LocalizationValue {
-        let kinds = Set(entry.session.tracks.map(\.kind))
-        if kinds == [.system] { return "history.f5.system.only" }   // F6: 컴퓨터 소리만
-        if kinds.contains(.mixed) { return "history.f5.mixed" }
-        if kinds.contains(.system) { return "history.f5.mixed" }
-        if kinds.contains(.mic) { return "history.f5.mic.only" }
-        return "history.f5.failed"
-    }
-
     var body: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(entry.session.startedAt, format: .dateTime.month().day().hour().minute())
+                    Text(startedAt, format: .dateTime.month().day().hour().minute())
                         .font(.body)
                     Text(t(badgeKey))
                         .font(.caption2)
@@ -996,7 +1051,7 @@ private struct RecordingRow: View {
                     .font(.caption2).foregroundStyle(.secondary)
             }
             Spacer()
-            if entry.primaryAudioURL != nil {
+            if hasAudio {
                 Button { onPlay() } label: {
                     Label(isPlaying ? t("history.stop") : t("history.play"),
                           systemImage: isPlaying ? "stop.fill" : "play.fill")
@@ -1019,7 +1074,7 @@ private struct RecordingRow: View {
     }
 
     private var durationLabel: String {
-        let s = Int(entry.session.durationSeconds)
+        let s = Int(durationSeconds)
         return String(format: "%d:%02d", s / 60, s % 60)
     }
 }

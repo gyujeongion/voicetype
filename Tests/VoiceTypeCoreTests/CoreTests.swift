@@ -691,3 +691,30 @@ final class SystemRecordingSettingsTests: XCTestCase {
                        "F6 시스템 소리 녹음")
     }
 }
+
+final class SystemClipNameTests: XCTestCase {
+    private let kst = TimeZone(identifier: "Asia/Seoul")!
+
+    func testFormatIsDateSpaceTimeWithHyphens() {
+        let d = ISO8601DateFormatter().date(from: "2026-10-05T19:45:12Z")!   // KST 04:45:12
+        XCTAssertEqual(SystemClipName.make(from: d, timeZone: kst), "2026-10-06 04-45-12")
+    }
+
+    func testParseRoundTripAndDuplicateSuffix() {
+        let d = ISO8601DateFormatter().date(from: "2026-10-05T19:45:12Z")!
+        let name = SystemClipName.make(from: d, timeZone: kst)
+        XCTAssertEqual(SystemClipName.parse(name + ".m4a", timeZone: kst), d)
+        XCTAssertEqual(SystemClipName.parse(name + " (2).m4a", timeZone: kst), d)   // 같은 초 중복 접미사
+    }
+
+    func testFileNameHasNoCharactersFinderCannotShow() {
+        let n = SystemClipName.make(from: Date())
+        XCTAssertFalse(n.contains(":"))
+        XCTAssertFalse(n.contains("/"))
+    }
+
+    func testUnknownFormatReturnsNil() {
+        XCTAssertNil(SystemClipName.parse("system.m4a"))
+        XCTAssertNil(SystemClipName.parse("random name.m4a"))
+    }
+}

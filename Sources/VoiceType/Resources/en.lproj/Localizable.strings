@@ -36,7 +36,7 @@
 "recorder.name" = "F5 Recording";
 "recorder.system.name" = "F6 System Audio Recording";
 "recorder.system.hotkey" = "System-audio-only shortcut";
-"recorder.system.note" = "Records only what the computer plays — no microphone (videos, the other side of a call). Needs Screen Recording permission; other apps notification sounds are captured too.";
+"recorder.system.note" = "Records only what the computer plays — no microphone (videos, the other side of a call). Needs Screen Recording permission; other apps notification sounds are captured too. Saved only as \"date time.m4a\" in the \"System Audio\" folder inside your recordings folder.";
 "recorder.reveal" = "Show the recording in Finder when it finishes";
 "menu.recorder.system.start" = "Record system audio only";
 "history.f5.system.only" = "System audio only";

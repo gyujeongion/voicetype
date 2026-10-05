@@ -36,7 +36,7 @@
 "recorder.name" = "F5 녹음";
 "recorder.system.name" = "F6 시스템 소리 녹음";
 "recorder.system.hotkey" = "시스템 소리만 녹음 단축키";
-"recorder.system.note" = "마이크 없이 컴퓨터에서 나는 소리만 녹음합니다(유튜브·회의 상대방 소리 등). 화면 기록 권한이 필요하고, 알림음 같은 다른 앱 소리도 함께 녹음됩니다.";
+"recorder.system.note" = "마이크 없이 컴퓨터에서 나는 소리만 녹음합니다(유튜브·회의 상대방 소리 등). 화면 기록 권한이 필요하고, 알림음 같은 다른 앱 소리도 함께 녹음됩니다. 파일은 녹음 폴더 안 \"System Audio\" 폴더에 \"날짜 시간.m4a\"로만 저장됩니다.";
 "recorder.reveal" = "녹음이 끝나면 Finder에서 파일 위치 보여주기";
 "menu.recorder.system.start" = "시스템 소리만 녹음 시작";
 "history.f5.system.only" = "시스템 소리만";
