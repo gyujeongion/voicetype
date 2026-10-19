@@ -1,6 +1,6 @@
 # VoiceType
 
-Free, open-source macOS dictation with real-time streaming STT — bring your own API key.
+Free, open-source macOS dictation with real-time streaming STT. Bring your own API key.
 
 [![Download](https://img.shields.io/github/v/release/gyujeongion/voicetype?label=Download&logo=apple&color=000)](https://github.com/gyujeongion/voicetype/releases/latest/download/VoiceType-1.0.0.dmg)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000?logo=apple)
@@ -14,7 +14,7 @@ Free, open-source macOS dictation with real-time streaming STT — bring your ow
 
 Most dictation apps work like this: record → stop → wait → text. You speak into a void.
 
-VoiceType streams over a persistent WebSocket. Words appear on the floating indicator **as you talk** — you get real-time feedback mid-sentence. Press your hotkey again and the final transcript is injected at your cursor.
+VoiceType streams over a persistent WebSocket. Words appear on the floating indicator **as you talk**, mid-sentence. Press your hotkey again and the final transcript is injected at your cursor.
 
 No server. No subscription. Audio goes directly from your mic to the STT provider you choose.
 
@@ -44,7 +44,7 @@ No server. No subscription. Audio goes directly from your mic to the STT provide
 - **Custom vocabulary** — register names, terms, brands. STT learns the exact spelling.
 - **LLM post-processing** — optional cleanup, translation, or custom instruction per profile. Groq, Gemini, DeepSeek, Claude, OpenAI, OpenRouter, or any OpenAI-compatible endpoint.
 - **History** — last 300 dictations with raw transcript and processed output.
-- **Microphone priority** — ordered fallback list. Automatically switches when your preferred mic connects.
+- **Microphone priority** — ordered fallback list. Switches automatically when your preferred mic connects.
 - **Sparkle auto-update** — notified when a new version is available.
 
 ---
@@ -98,7 +98,7 @@ All shortcuts are remappable. Add more profiles (with any instruction) in Settin
 
 ## LLM post-processing
 
-Optional. Cleans up filler words, translates, summarises — whatever instruction you set per profile.
+Optional. Cleans up filler words, translates, summarises, or follows whatever instruction you set per profile.
 
 Ranked by speed for post-processing:
 
