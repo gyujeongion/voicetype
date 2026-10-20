@@ -17,16 +17,36 @@ final class AudioCapture: @unchecked Sendable {
     private var converter: AVAudioConverter?
     private let targetFormat: AVAudioFormat
     private(set) var isRunning = false
+    /// 콜백·녹음 파일은 메인에서 바꾸고 오디오 스레드에서 읽는다. 클로저 프로퍼티를 락 없이
+    /// 동시에 읽고 쓰면 드물게 크래시하므로 보호한다 (100ms마다 1회라 비용은 무시할 수준).
+    private let callbackLock = NSLock()
+    private var _audioFile: AVAudioFile?
+    private var _onPCM: ((Data) -> Void)?
+    private var _onLevel: (@Sendable (Float) -> Void)?
+    private var _onPCMDetailed: ((Data, Int, Double) -> Void)?
+
     /// 원본 오디오 녹음 파일 (m4a/AAC). recordingURL이 주어졌을 때만 생성.
-    private var audioFile: AVAudioFile?
+    private var audioFile: AVAudioFile? {
+        get { callbackLock.withLock { _audioFile } }
+        set { callbackLock.withLock { _audioFile = newValue } }
+    }
 
     /// 변환된 PCM(s16le) 청크 콜백 (오디오 스레드에서 호출됨)
-    var onPCM: ((Data) -> Void)?
+    var onPCM: ((Data) -> Void)? {
+        get { callbackLock.withLock { _onPCM } }
+        set { callbackLock.withLock { _onPCM = newValue } }
+    }
     /// 입력 레벨(RMS, 0~1) — 인디케이터 레벨미터용 (메인 스레드로 전달)
-    var onLevel: (@Sendable (Float) -> Void)?
+    var onLevel: (@Sendable (Float) -> Void)? {
+        get { callbackLock.withLock { _onLevel } }
+        set { callbackLock.withLock { _onLevel = newValue } }
+    }
     /// 변환된 PCM + 프레임 수 + 세션 시작 기준 경과 초. 녹음(CAFWriter)용.
     /// 기존 onPCM은 받아쓰기 STT 전송용으로 그대로 둔다.
-    var onPCMDetailed: ((Data, Int, Double) -> Void)?
+    var onPCMDetailed: ((Data, Int, Double) -> Void)? {
+        get { callbackLock.withLock { _onPCMDetailed } }
+        set { callbackLock.withLock { _onPCMDetailed = newValue } }
+    }
     /// 경과 시각 산출 기준. start()에서 설정된다.
     private var sessionStartHostTime: UInt64 = 0
 
@@ -206,6 +226,10 @@ final class AudioCapture: @unchecked Sendable {
     // MARK: - 변환
 
     private func process(_ buffer: AVAudioPCMBuffer) {
+        // 콜백은 한 번에 스냅샷해 쓴다 (도중에 메인이 nil로 바꿔도 이번 버퍼는 일관되게 처리)
+        let (onPCM, onPCMDetailed, onLevel, audioFile) = callbackLock.withLock {
+            (_onPCM, _onPCMDetailed, _onLevel, _audioFile)
+        }
         // 받아쓰기는 onPCM만, 녹음은 onPCMDetailed만 쓴다. 둘 다 없을 때만 건너뛴다.
         guard let converter = converter, onPCM != nil || onPCMDetailed != nil else { return }
         let ratio = targetFormat.sampleRate / buffer.format.sampleRate

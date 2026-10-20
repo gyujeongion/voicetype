@@ -122,11 +122,23 @@ final class HistoryStore: ObservableObject {
         entries = decoded
     }
 
+    /// 디스크 쓰기 전용 직렬 큐. 히스토리 파일이 수백 KB라 메인에서 인코딩·쓰기를 하면
+    /// 받아쓰기 결과를 붙여넣는 순간 UI와 키 입력 처리가 잠깐 멈춘다.
+    nonisolated private static let ioQueue = DispatchQueue(label: "com.ion.voicetype.history.io", qos: .utility)
+
+    /// 앱 종료 직전, 대기 중인 히스토리 쓰기를 끝까지 기다린다.
+    nonisolated static func flushPendingWrites() {
+        ioQueue.sync { }
+    }
+
     private func persist() {
-        let enc = JSONEncoder()
-        enc.outputFormatting = [.prettyPrinted]
-        if let data = try? enc.encode(entries) {
-            try? data.write(to: fileURL, options: .atomic)
+        let snapshot = entries   // 값 타입 복사 — 백그라운드에서 안전하게 인코딩
+        let url = fileURL
+        Self.ioQueue.async {
+            // 들여쓰기 없는 JSON: 크기가 크게 줄고 읽기 호환은 그대로다
+            if let data = try? JSONEncoder().encode(snapshot) {
+                try? data.write(to: url, options: .atomic)
+            }
         }
     }
 }

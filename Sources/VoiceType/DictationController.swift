@@ -23,6 +23,8 @@ final class DictationController {
     private static var accessibilityWarned = false
     /// finish 후 STT 응답 지연 가드
     private var finishTimeout: Task<Void, Never>?
+    /// STT 결과 후 LLM 후처리·주입 작업. 취소(Esc) 때 함께 끊어 네트워크 요청·codex 프로세스를 멈춘다.
+    private var postTask: Task<Void, Never>?
     /// 이번 세션의 식별자. 취소·타임아웃 이후 늦게 도착하는 옛 엔진의 콜백(지연·중복 응답)을
     /// 걸러내는 데 쓴다 — 없으면 옛 세션의 텍스트가 새 세션의 프로파일/녹음파일에 잘못 붙는다.
     private var sessionToken: UUID?
@@ -64,6 +66,8 @@ final class DictationController {
         // 세션 토큰을 먼저 지워야 진행 중인 STT 콜백·후처리 Task가 결과를 내보내지 못한다
         sessionToken = nil
         engine?.cancel()
+        postTask?.cancel()
+        postTask = nil
         cleanup()   // 원본 오디오 파일도 여기서 지워진다
         setState(.idle)
     }
@@ -202,7 +206,8 @@ final class DictationController {
         let recordingURL = activeRecordingURL
         activeRecordingURL = nil
         let expectedApp = startedInAppBundleID
-        Task { @MainActor in
+        postTask = Task { @MainActor in
+            defer { if self.sessionToken == token || self.sessionToken == nil { self.postTask = nil } }
             var out = text
             var pasted = false
             // 프로파일이 LLM 사용 시에만 후처리 (번역/요약/정리 등)

@@ -13,6 +13,7 @@ final class RecordingIndicatorController {
         guard model.style != .off else { hide(); return }
         if panel == nil { build() }
         model.level = 0
+        model.isShown = true
         resizeToFit()
         reposition()
         panel?.orderFrontRegardless()
@@ -20,9 +21,12 @@ final class RecordingIndicatorController {
 
     func hide() {
         panel?.orderOut(nil)
+        // 숨긴 뒤에도 뷰가 살아 있으면 TimelineView(.animation)·반복 애니메이션이 계속 돈다.
+        // 내용을 비워 화면 갱신을 멈춘다 (메뉴바 앱이라 하루 종일 떠 있다).
+        model.isShown = false
     }
 
-    func setLevel(_ level: Float) { model.level = level }
+    func setLevel(_ level: Float) { if model.isShown { model.level = level } }
     func setCaption(_ text: String) { model.caption = text }
     func setMode(_ mode: IndicatorModel.Mode) { model.mode = mode }
     func setSecondaryLevel(_ level: Float) { model.secondaryLevel = level }
@@ -105,13 +109,15 @@ final class IndicatorModel: ObservableObject {
     @Published var showsSecondaryLevel: Bool = false
     /// 경과 시간 표시 문자열. 빈 문자열이면 표시하지 않는다.
     @Published var elapsedText: String = ""
+    /// 패널이 화면에 떠 있는지. false면 뷰를 비워 애니메이션을 멈춘다.
+    @Published var isShown = false
 }
 
 private struct RecordingIndicatorView: View {
     @ObservedObject var model: IndicatorModel
 
     var body: some View {
-        if model.style == .off {
+        if model.style == .off || !model.isShown {
             EmptyView()
         } else {
             // 녹음 부가 정보(경과 시간·시스템 오디오 레벨)는 스타일 5종 공통으로 여기서 붙인다.
@@ -159,6 +165,7 @@ enum IndicatorRenderer {
         model.style = style
         model.level = level
         model.mode = mode
+        model.isShown = true
         let content = ZStack {
             Color(red: 0.10, green: 0.12, blue: 0.16)   // 다크 데스크톱 근사
             RecordingIndicatorView(model: model).padding(24)

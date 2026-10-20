@@ -718,3 +718,45 @@ final class SystemClipNameTests: XCTestCase {
         XCTAssertNil(SystemClipName.parse("random name.m4a"))
     }
 }
+
+final class SpaceHoldDetectorTests: XCTestCase {
+    /// 활성화 때 지우는 Space 수 = 실제로 통과시킨 Space 수. 하나라도 더 지우면 앞 글자가 날아간다.
+    func testEraseCountMatchesSpacesPassedThrough() {
+        for threshold in 1...8 {
+            var d = SpaceHoldDetector(threshold: threshold)
+            var passed = 0
+            if d.keyDown(isRepeat: false) == .pass { passed += 1 }
+            var activation: Int?
+            for _ in 0..<20 {
+                switch d.keyDown(isRepeat: true) {
+                case .pass: passed += 1
+                case .activate(let n): activation = n
+                default: break
+                }
+                if activation != nil { break }
+            }
+            XCTAssertEqual(activation, passed, "threshold \(threshold)")
+        }
+    }
+
+    func testSwallowWhileActiveAndDeactivateOnKeyUp() {
+        var d = SpaceHoldDetector(threshold: 2)
+        _ = d.keyDown(isRepeat: false)
+        _ = d.keyDown(isRepeat: true)
+        XCTAssertEqual(d.keyDown(isRepeat: true), .activate(eraseCount: 2))
+        XCTAssertEqual(d.keyDown(isRepeat: true), .swallow)
+        XCTAssertEqual(d.keyUp(), .deactivate)
+        XCTAssertFalse(d.isActive)
+        XCTAssertEqual(d.keyDown(isRepeat: false), .pass)
+    }
+
+    /// 짧게 눌렀다 뗀 Space는 반복 횟수를 다음으로 넘기지 않는다.
+    func testShortPressesDoNotAccumulate() {
+        var d = SpaceHoldDetector(threshold: 3)
+        for _ in 0..<10 {
+            XCTAssertEqual(d.keyDown(isRepeat: false), .pass)
+            XCTAssertEqual(d.keyDown(isRepeat: true), .pass)
+            XCTAssertEqual(d.keyUp(), .pass)
+        }
+    }
+}

@@ -12,6 +12,8 @@ final class DeepgramClient: NSObject, STTEngine, @unchecked Sendable {
     private var task: URLSessionWebSocketTask?
     private var done = false
     private var finishRequested = false
+    /// done·task·session은 메인(시작·취소)·오디오 스레드(sendAudio)·URLSession 큐(수신)가 함께 만진다
+    private let lock = NSLock()
 
     private var finalSegments: [String] = []
     private var interim = ""
@@ -21,7 +23,7 @@ final class DeepgramClient: NSObject, STTEngine, @unchecked Sendable {
     var onError: ((Error) -> Void)?
 
     func start(apiKey: String, languageHints: [String], terms: [String], customEndpoint: String?) {
-        done = false
+        lock.withLock { done = false }
         finishRequested = false
         finalSegments = []
         interim = ""
@@ -53,47 +55,65 @@ final class DeepgramClient: NSObject, STTEngine, @unchecked Sendable {
         req.setValue("Token \(apiKey)", forHTTPHeaderField: "Authorization")
 
         let session = URLSession(configuration: .default)
-        self.session = session
         let t = session.webSocketTask(with: req)
-        task = t
+        lock.withLock {
+            self.session = session
+            task = t
+        }
         t.resume()
         receiveNext()
     }
 
     func sendAudio(_ data: Data) {
-        guard !done, let task = task else { return }
+        guard let task = liveTask() else { return }
         task.send(.data(data)) { [weak self] err in
             if let err = err { self?.fail(err) }
         }
     }
 
     func finish() {
-        guard !done, let task = task else { return }
+        guard let task = liveTask() else { return }
         finishRequested = true
         // CloseStream → 서버가 남은 결과 전송 후 연결 종료
         task.send(.string(#"{"type":"CloseStream"}"#)) { _ in }
     }
 
     func cancel() {
-        done = true
+        lock.withLock { done = true }
         teardown()
+    }
+
+    /// 아직 끝나지 않았으면 현재 소켓을 돌려준다.
+    private func liveTask() -> URLSessionWebSocketTask? {
+        lock.withLock { done ? nil : task }
+    }
+
+    /// 처음 끝내는 쪽만 true. 완료·실패·취소가 겹쳐도 콜백은 한 번만 나간다.
+    private func markDone() -> Bool {
+        lock.withLock {
+            if done { return false }
+            done = true
+            return true
+        }
     }
 
     /// 소켓을 닫고 세션을 무효화한다. URLSession은 invalidate하지 않으면 해제되지 않아
     /// 받아쓰기마다 세션이 하나씩 쌓인다.
     private func teardown() {
-        task?.cancel(with: .goingAway, reason: nil)
-        task = nil
-        session?.invalidateAndCancel()
-        session = nil
+        let (t, s) = lock.withLock { () -> (URLSessionWebSocketTask?, URLSession?) in
+            defer { task = nil; session = nil }
+            return (task, session)
+        }
+        t?.cancel(with: .goingAway, reason: nil)
+        s?.invalidateAndCancel()
     }
 
     // MARK: - 내부
 
     private func receiveNext() {
-        guard let task = task else { return }
+        guard let task = liveTask() else { return }
         task.receive { [weak self] result in
-            guard let self = self, !self.done else { return }
+            guard let self = self, self.liveTask() != nil else { return }
             switch result {
             case .failure(let err):
                 if self.finishRequested {
@@ -109,7 +129,7 @@ final class DeepgramClient: NSObject, STTEngine, @unchecked Sendable {
                 @unknown default: data = nil
                 }
                 if let data = data { self.handle(data) }
-                if !self.done { self.receiveNext() }
+                self.receiveNext()
             }
         }
     }
@@ -138,16 +158,14 @@ final class DeepgramClient: NSObject, STTEngine, @unchecked Sendable {
     }
 
     private func complete() {
-        guard !done else { return }
-        done = true
+        guard markDone() else { return }
         let text = finalSegments.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         teardown()
         DispatchQueue.main.async { [weak self] in self?.onFinished?(text) }
     }
 
     private func fail(_ error: Error) {
-        guard !done else { return }
-        done = true
+        guard markDone() else { return }
         teardown()
         DispatchQueue.main.async { [weak self] in self?.onError?(error) }
     }

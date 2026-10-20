@@ -3,7 +3,7 @@ import SwiftUI
 import VoiceTypeCore
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private let dictation = DictationController()
     private let recorder = RecorderController()
@@ -21,6 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var settingsVM = SettingsViewModel()
     private var onboarding: OnboardingController?
     private var previewTimer: Timer?
+    /// 마지막으로 등록한 단축키 구성 — 같으면 재등록을 건너뛴다
+    private var lastHotkeySignature = ""
 
     private var l: LocalizationManager { .shared }
 
@@ -29,6 +31,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         openSettings()
         return true
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        spaceTrigger.disable()
+        HistoryStore.flushPendingWrites()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -42,7 +49,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let n = await self.recorder.recoverIncompleteSessions()
             if n > 0 { self.notify(String(format: self.l.text("recorder.recovered"), n), kind: .info) }
         }
-        SettingsStore.shared.onChange = { [weak self] _ in
+        // 설정창은 글자 하나 칠 때마다 저장한다. 메뉴 재구성은 언어가 바뀔 때만 필요하다
+        // (상태 메뉴는 열 때마다 menuNeedsUpdate로 새로 채워진다).
+        var lastLanguage = SettingsStore.shared.settings.appLanguage
+        SettingsStore.shared.onChange = { [weak self] s in
+            guard s.appLanguage != lastLanguage else { return }
+            lastLanguage = s.appLanguage
             self?.refreshLocalizedUI()
         }
         // 설정에서 인디케이터 디자인을 바꾸면 실제 오버레이로 잠깐 미리보기
@@ -378,6 +390,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         keys.append((id: Self.systemRecordingHotkeyID,
                      keyCode: s.systemRecordingHotkeyKeyCode,
                      modifiers: s.systemRecordingHotkeyModifiers))
+        // 설정창 입력마다 불리므로 단축키 구성이 그대로면 전역 단축키를 다시 등록하지 않는다
+        let signature = keys.map { "\($0.id):\($0.keyCode):\($0.modifiers)" }.joined(separator: ",")
+        guard signature != lastHotkeySignature else { return }
+        lastHotkeySignature = signature
         let failed = hotkey.registerAll(keys)
         // 매 설정 변경마다 불리므로 값이 바뀔 때만 발행 (불필요한 SwiftUI 재그리기 방지)
         if settingsVM.failedHotkeyIDs != failed { settingsVM.failedHotkeyIDs = failed }
@@ -461,8 +477,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         win.title = l.text("window.settings")
         win.styleMask = [.titled, .closable, .miniaturizable]
         win.isReleasedWhenClosed = false
+        win.delegate = self
         win.center()
         settingsWindow = win
+    }
+
+    /// 설정창을 닫으면 SwiftUI 뷰 트리를 통째로 놓아준다. 메뉴바 앱은 몇 주씩 떠 있는데,
+    /// 닫힌 창의 뷰가 히스토리·녹음 목록을 계속 구독하며 메모리를 잡고 있을 이유가 없다.
+    /// 다음에 열 때 다시 만든다 (설정 상태는 settingsVM에 남아 있다).
+    func windowWillClose(_ notification: Notification) {
+        guard let win = notification.object as? NSWindow, win === settingsWindow else { return }
+        AudioPreviewPlayer.shared.stop()
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let closing = self.settingsWindow, closing === win, !closing.isVisible else { return }
+            closing.delegate = nil
+            closing.contentViewController = nil
+            self.settingsWindow = nil
+        }
     }
 
     @objc private func checkForUpdates() { UpdaterManager.shared.checkForUpdates() }

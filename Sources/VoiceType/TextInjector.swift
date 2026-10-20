@@ -41,6 +41,7 @@ enum TextInjector {
             // Save existing clipboard so we can restore it after paste
             let snapshot = ClipboardSnapshot(pasteboard: pb)
             copyToClipboard(text)
+            let ourChangeCount = pb.changeCount
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                 if let expectedAppBundleID,
                    NSWorkspace.shared.frontmostApplication?.bundleIdentifier != expectedAppBundleID {
@@ -50,8 +51,11 @@ enum TextInjector {
                     return
                 }
                 paste()
-                // Restore previous clipboard once the target app has consumed Cmd+V
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                // 대상 앱이 Cmd+V를 처리한 뒤 이전 클립보드를 되돌린다. 무거운 앱(Electron·브라우저)은
+                // 0.35초로는 붙여넣기 전에 복원돼 옛 클립보드가 붙던 경우가 있어 여유를 둔다.
+                // 그 사이 사용자가 직접 무언가를 복사했다면(changeCount 변경) 덮어쓰지 않는다.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    guard pb.changeCount == ourChangeCount else { return }
                     snapshot.restore(to: pb)
                 }
             }

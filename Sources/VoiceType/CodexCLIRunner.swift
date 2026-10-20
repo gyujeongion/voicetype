@@ -19,14 +19,22 @@ enum CodexCLIRunner {
         guard let exe = executablePath() else {
             return .failure(Failure(message: "codex CLI를 찾을 수 없습니다. 터미널에서 `brew install --cask codex` 후 `codex login`을 하세요."))
         }
-        return await withCheckedContinuation { cont in
-            DispatchQueue.global(qos: .userInitiated).async {
-                cont.resume(returning: runBlocking(exe: exe, prompt: prompt, model: model, timeout: timeout))
+        // 받아쓰기를 Esc로 취소하면 codex 프로세스도 바로 끝낸다 (안 그러면 최대 75초간 구독 쿼터를 쓴다)
+        let handle = ProcessHandle()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { cont in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    cont.resume(returning: runBlocking(exe: exe, prompt: prompt, model: model,
+                                                       timeout: timeout, handle: handle))
+                }
             }
+        } onCancel: {
+            handle.cancel()
         }
     }
 
-    private static func runBlocking(exe: String, prompt: String, model: String, timeout: TimeInterval) -> Result<String, Failure> {
+    private static func runBlocking(exe: String, prompt: String, model: String, timeout: TimeInterval,
+                                    handle: ProcessHandle) -> Result<String, Failure> {
         let fm = FileManager.default
         let workDir = fm.temporaryDirectory.appendingPathComponent("voicetype-codex-\(UUID().uuidString)", isDirectory: true)
         try? fm.createDirectory(at: workDir, withIntermediateDirectories: true)
@@ -50,17 +58,28 @@ enum CodexCLIRunner {
         let errBox = ErrBox()
         errPipe.fileHandleForReading.readabilityHandler = { h in errBox.append(h.availableData) }
 
+        // 어느 경로로 끝나든 핸들러를 떼고 파이프를 닫는다 — 안 그러면 호출마다 fd와 핸들러가 남는다
+        defer {
+            errPipe.fileHandleForReading.readabilityHandler = nil
+            try? errPipe.fileHandleForReading.close()
+        }
+
         let done = DispatchSemaphore(value: 0)
         p.terminationHandler = { _ in done.signal() }
         do { try p.run() } catch {
             return .failure(Failure(message: "codex 실행 실패: \(error.localizedDescription)"))
+        }
+        guard handle.attach(p) else {   // 시작 직전에 이미 취소됨
+            p.terminate()
+            _ = done.wait(timeout: .now() + 3)
+            return .failure(Failure(message: "취소됨"))
         }
         if done.wait(timeout: .now() + timeout) == .timedOut {
             p.terminate()
             _ = done.wait(timeout: .now() + 3)
             return .failure(Failure(message: "codex 응답이 \(Int(timeout))초 안에 오지 않았습니다."))
         }
-        errPipe.fileHandleForReading.readabilityHandler = nil
+        if handle.isCancelled { return .failure(Failure(message: "취소됨")) }
 
         let text = (try? String(contentsOf: outFile, encoding: .utf8))?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -70,6 +89,31 @@ enum CodexCLIRunner {
             return .failure(Failure(message: "codex 로그인이 필요합니다. 터미널에서 `codex login`을 실행하세요."))
         }
         return .failure(Failure(message: "codex 실패(종료 \(p.terminationStatus))\(tail.isEmpty ? "" : ": " + tail)"))
+    }
+}
+
+/// 실행 중인 codex 프로세스를 취소 핸들러와 공유한다.
+private final class ProcessHandle: @unchecked Sendable {
+    private let lock = NSLock()
+    private var process: Process?
+    private var cancelled = false
+
+    var isCancelled: Bool { lock.withLock { cancelled } }
+
+    /// false면 이미 취소된 상태 — 호출자가 프로세스를 끝내야 한다.
+    func attach(_ p: Process) -> Bool {
+        lock.withLock {
+            process = p
+            return !cancelled
+        }
+    }
+
+    func cancel() {
+        let p = lock.withLock { () -> Process? in
+            cancelled = true
+            return process
+        }
+        if let p, p.isRunning { p.terminate() }
     }
 }
 
